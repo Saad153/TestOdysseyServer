@@ -672,7 +672,7 @@ routes.get("/voucherLedger", async(req, res) => {
       }
     })
     console.log("Result Done")
-    // console.log(result)
+    console.log(result)
 
     // const result = await Child_Account.findAll({
     //   where:{ParentAccountId:req.headers.id},
