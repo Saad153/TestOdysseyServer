@@ -652,11 +652,12 @@ routes.get("/balanceSheet", async(req, res) => {
 
 routes.get("/voucherLedger", async(req, res) => {
   try {
-    const result = await Voucher_Heads.findAll({
-      // raw: true,
-      attributes:["amount", "type", "createdAt", "defaultAmount", "narration"],
+    const childAccountCondition = req.headers.id
+      ? { ChildAccountId: req.headers.id }
+      : { ChildAccountId: { [Op.ne]: null } };
+    const result = await Voucher_Heads.count({
       where:{
-        ChildAccountId:req.headers.id,
+        ...childAccountCondition,
         createdAt:{
           [Op.gte]: moment(req.headers.from).toDate(),
           [Op.lte]: moment(req.headers.to).add(1, 'days').toDate(),
@@ -665,9 +666,9 @@ routes.get("/voucherLedger", async(req, res) => {
       include:{
         model:Vouchers,
         where:{
+          CompanyId: req.headers.companyid, 
           currency:req.headers.currency
         },
-        attributes:["id", "currency", "vType", "type", "exRate"],
       }
     })
     console.log("Result Done")
@@ -728,10 +729,15 @@ routes.get("/getByDate", async(req, res) => {
 
 routes.get("/getLedger", async(req, res) => {
   try {
+    console.log(req.headers)
+    console.log(req.body)
+    const childAccountCondition = req.headers.id!='undefined'
+      ? { ChildAccountId: req.headers.id }
+      : { ChildAccountId: { [Op.ne]: null } };
     const result = await Voucher_Heads.findAll({
       raw:true,
       where:{
-        ChildAccountId:req.headers.id,
+        ...childAccountCondition,
         createdAt:{
           [Op.lte]: moment(req.headers.to).add(1, 'days').toDate(),
         }
@@ -741,13 +747,19 @@ routes.get("/getLedger", async(req, res) => {
         model:Vouchers,
         attributes:['voucher_Id', 'id', 'type', 'currency', 'exRate', 'vType'],
         where:{
-          currency:req.headers.currency
+          currency:req.headers.currency,
+          CompanyId: req.headers.company
         }
+      },
+      {
+        model:Child_Account,
+        attributes:['title'],
       }],
       order:[["createdAt","ASC"]],
     })
     res.json({status:'success', result:result});
   } catch (error) {
+    console.log(error)
     res.json({status:'error', result:error});
   }
 });
