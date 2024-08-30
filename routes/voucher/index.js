@@ -131,6 +131,60 @@ routes.post("/voucherCreation", async (req, res) => {
   }
 });
 
+routes.post("/cheaqueReturned", async (req, res) => {
+  try {
+    const data = req.body
+    const {VoucherId, InvoiceId} = data;
+
+   const found = await Vouchers.findOne({
+      order: [["voucher_No", "DESC"]],
+      where: { id:VoucherId  }
+    });
+    const { CompanyId, costCenter, currency, exRate, voucher_No, voucher_Id,
+      vType, type, subType, partyType, partyName, partyId, onAccount,
+      invoices, tranDate
+    } = found.dataValues;
+
+    //Create and post Voucher & Voucher Head
+    const vId = voucher_Id.replace(/-[^-]+(?=-\d+\/\d+)/, "-CR");
+    const vtype = vType.replace(/.*/, "CR");
+
+    const voucher_Data = {
+      CompanyId, costCenter, currency, exRate, voucher_No, voucher_Id: vId,
+      vType: vtype, type, subType, partyType, partyName, partyId, onAccount,
+      invoices, tranDate
+    };
+    const voucher_created = await Vouchers.create(voucher_Data);
+    const vData = {...data, VoucherId: voucher_created.id }
+ 
+    const VHresult = await Voucher_Heads.create(vData);
+
+
+    const getInvoiceTransaction = await Invoice_Transactions.findOne({
+       where:
+      { InvoiceId: InvoiceId}
+    
+      
+    })
+    const {...rest} = getInvoiceTransaction.dataValues;
+
+    const UpdateInvoiceTransaction = await Invoice_Transactions.update(
+      {
+     ...rest,
+    amount: "0" },
+     {where:{ InvoiceId: InvoiceId}} 
+     
+     
+   )
+
+
+   res.json({ status: "success", result:UpdateInvoiceTransaction });
+  } catch (error) {
+    console.log(error)
+    res.json({ status: "error", result: error });
+  }
+});
+
 routes.post("/voucherEdit", async (req, res) => {
   try {
     await Vouchers.update({ ...req.body }, { where: { id: req.body.id } })
