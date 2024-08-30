@@ -105,6 +105,7 @@ routes.get("/OfficeAllVouchers", async (req, res) => {
 
 routes.post("/voucherCreation", async (req, res) => {
   try {
+    console.log(req.body)
     const check = await Vouchers.findOne({
       order: [["voucher_No", "DESC"]],
       attributes: ["voucher_No"],

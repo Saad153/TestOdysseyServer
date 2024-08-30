@@ -40,6 +40,7 @@ async function getAllAccounts(id){
 
 routes.post("/createParentAccount", async(req, res) => {
   try {
+    // console.log(req.body)
     const result = await Parent_Account.findOne({
       where: {
         [Op.and]: [
@@ -51,11 +52,11 @@ routes.post("/createParentAccount", async(req, res) => {
     })
     if(result){
       console.log("result found")
-      console.log("54"+result)
+      // console.log(result)
       res.json({status:'exists', result:result});
     }else{
       const code = req.body.CompanyId.toString()+req.body.AccountId.toString();
-      console.log(code)
+      // console.log(code)
       const result1 = await Parent_Account.findOne({
         where: {
           code: {
@@ -65,15 +66,29 @@ routes.post("/createParentAccount", async(req, res) => {
         order: [['code', 'DESC']],
       });
       
-      
-      console.log(result1.dataValues.code)
-      let newCode = parseInt(result1.dataValues.code)+1
+      let newCode = 0
+      if(result1){
+        console.log("Printing found values")
+        // console.log(result1)
+        newCode = parseInt(result1.dataValues.code)+1
+        // console.log(newCode)
+      }else{
+        newCode = parseInt(code)*100
+        newCode++
+      }
       let values = req.body
-      values.editable=1
+      values.editable=0
       values.code=newCode.toString()
-      await Parent_Account.create(values);
+      // console.log("Printing values")
+      // console.log(values)
+      const result2 = await Parent_Account.create(values);
+      // console.log(result2)
       let val;
-      val = await getAllAccounts(req.body.CompanyId);
+      val = await Parent_Account.findOne({
+        where: {
+          code: newCode.toString()
+        }
+      });
       res.json({status:'success', result:val});
     }
   }
@@ -85,6 +100,7 @@ routes.post("/createParentAccount", async(req, res) => {
 
 routes.post("/createChildAccount", async(req, res) => {
   try {
+    console.log(req.body)
     const result = await Child_Account.findOne({
       where: {
         [Op.and]: [
@@ -105,21 +121,35 @@ routes.post("/createChildAccount", async(req, res) => {
       const result2 = await Child_Account.findOne({
         where: {
           code: {
-            [Op.gte]: parseInt(code)* 10000,  
-            [Op.lt]: (parseInt(code)+1) * 10000  
+            [Op.gte]: (parseInt(code)* 10000).toString(),  
+            [Op.lt]: ((parseInt(code)+1) * 10000).toString()
           }
         },
         order: [['code', 'DESC']],
       });
+      let newCode = 0
+      if(result2){
+        newCode=parseInt(result2.dataValues.code)+1
+      }else{
+        newCode = (parseInt(code)*10000)+1
+      }
       
-      newCode=(parseInt(result2.dataValues.code)+1).toString()
 
       let values = req.body
-      values.editable=1
-      values.code=newCode
-      await Child_Account.create(values);
+      values.editable=0
+      values.code=newCode.toString()
+      values.ParentAccountId = req.body.ParentAccountId
+      console.log(values)
+      const result3 = await Child_Account.create(values);
+      // console.log(result3)
       let val;
-      val = await getAllAccounts(req.body.CompanyId);
+      // val = await getAllAccounts(req.body.CompanyId);
+      val = await Child_Account.findOne({
+        where:{
+          code: newCode.toString()
+        }
+      })
+      console.log(val)
       res.json({status:'success', result:val});
     }
   }
