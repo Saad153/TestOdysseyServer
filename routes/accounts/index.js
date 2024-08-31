@@ -362,7 +362,7 @@ routes.get("/getAccountsForTransactionVouchers", async(req, res) => {
 routes.get("/getAllChilds", async(req, res) => {
   try {
     const result = await Child_Account.findAll({
-      attributes:["title", "id","code"],
+      attributes:["title", "id","code","subCategory"],
       include:[{
         model:Parent_Account,
         where:{CompanyId:req.headers.companyid},
