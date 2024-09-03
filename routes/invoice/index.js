@@ -722,7 +722,7 @@ routes.get("/getInvoices", async(req, res) =>{
   try {
     const result = await Invoice.findAll({
       where: {SEJobId: req.headers.id},
-      attributes: ['invoice_No', 'payType', 'total', 'recieved', 'ex_rate'],
+      attributes: ['invoice_No', 'payType', 'total', 'recieved', 'ex_rate','approved'],
       include:[{
         model:Charge_Head,
         attributes:['charge'],
