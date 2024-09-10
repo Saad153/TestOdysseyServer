@@ -10,14 +10,14 @@ const config = require(__dirname + '/../config/config.json')[env];
 const db = {};
 const { Client } = require('pg')
 
-const client = "postgres://postgres:''@localhost:5432/odesy";
+// const client = "postgres://postgres:'Saad@645'@localhost:5432/odesy";
 
 let sequelize;
 
 // const connectionString = "postgresql://abdullah:ckn3lCxxtBsWY-65nwfJGA@expert-flapper-2045.7s5.cockroachlabs.cloud:26257/tech_dc_test?sslmode=verify-full"
 
-// const connectionString = "postgresql://farrukh:6gHni-AaAZZ7LUw7X5bkHg@boreal-coder-5746.7s5.aws-ap-south-1.cockroachlabs.cloud:26257/dev-server?sslmode=verify-full"
-sequelize = new Sequelize(client, {
+const connectionString = "postgresql://farrukh:6gHni-AaAZZ7LUw7X5bkHg@boreal-coder-5746.7s5.aws-ap-south-1.cockroachlabs.cloud:26257/dev-server?sslmode=verify-full"
+sequelize = new Sequelize(connectionString, {
   dialectOptions: {
     application_name: "docs_simplecrud_node-sequelize"
   },

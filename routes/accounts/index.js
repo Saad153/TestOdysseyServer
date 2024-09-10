@@ -38,6 +38,17 @@ async function getAllAccounts(id){
   return result;
 };
 
+async function getAccount(id){
+  let result;
+  result = await Child_Account.findOne({
+    attributes:['id', 'title'],
+    
+    where:{id:id}
+  });
+  return result;
+}
+
+
 routes.post("/createParentAccount", async(req, res) => {
   try {
     const result = await Parent_Account.findOne({
@@ -220,6 +231,17 @@ routes.get("/getAllAccounts", async(req, res) => {
   }
 });
 
+routes.get("/getAccount", async(req, res) => {
+  try {
+    let result;
+    result = await getAccount(req.headers.id);
+    res.json({status:'success', result:result});
+  }
+  catch (error) {
+    res.json({status:'error', result:error});
+  }
+});
+
 routes.get("/getAccountsForTransaction", async(req, res) => {
     let obj = { };
     let ChildObj = { };
@@ -290,7 +312,7 @@ routes.get("/getAccountsForTransaction", async(req, res) => {
 routes.get("/getAccountsForTransactionVouchers", async(req, res) => {
   let obj = { };
   let ChildObj = { };
-  console.log(req.headers.type, '====')
+  // console.log(req.headers.type, '====')
   if(req.headers.type=="Bank") {
       ChildObj = {subCategory:'Bank'}
     } else if(req.headers.type=="Cash"){
