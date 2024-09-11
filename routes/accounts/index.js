@@ -413,7 +413,6 @@ routes.get("/getAllParents", async(req, res) => {
 
 routes.get("/getAllParentswithChildsbyAccountId", async(req, res) => {
   try{
-    console.log("Running")
     const result = await Parent_Account.findAll({
       attributes:["title", "id", "code", "AccountId"],
       where:{CompanyId:req.headers.companyid},
@@ -742,6 +741,7 @@ routes.get("/getByDate", async(req, res) => {
         }
       ]
     }) 
+    console.log("Result",result)
     res.json({status:'success', result:result});
   }
   catch (error) {
