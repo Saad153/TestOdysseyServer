@@ -43,7 +43,11 @@ routes.post(`/${url}/getBySearch`, async(req, res) => {
             { code: Sequelize.where(Sequelize.fn('LOWER', Sequelize.col('code')), 'LIKE', '%' + req.body.search.toLowerCase() + '%') },
             { name: Sequelize.where(Sequelize.fn('LOWER', Sequelize.col('name')), 'LIKE', '%' + req.body.search.toLowerCase() + '%') }, 
           ],
-          types: Sequelize.where(Sequelize.fn('LOWER', Sequelize.col('types')), 'LIKE', '%overseas agent%'),
+          types: Sequelize.where(Sequelize.fn('LOWER', Sequelize.col('types')), 'LIKE', '%agent%')
+          // [Op.or]: [
+          //   {types: Sequelize.where(Sequelize.fn('LOWER', Sequelize.col('types')), 'LIKE', '%overseas agent%')},
+          //   {types: Sequelize.where(Sequelize.fn('LOWER', Sequelize.col('types')), 'LIKE', '%commission agent%')}
+          // ]
         }
       })
     }else if("representative"){

@@ -959,10 +959,12 @@ routes.post("/uploadbulkInvoicesTest", async (req, res) => {
 // For Data Backup
 routes.post("/createBulkInvoices", async (req, res) => {
   try {
-    await Invoice.bulkCreate(req.body)
+    console.log(req.body)
+    const result = await Invoice.create(req.body)
     .catch((x)=>{
       console.log(x)
     })
+    console.log(result.dataValues)
     await res.json({ status: "success" });
   } catch (error) {
     console.log(error)

@@ -159,6 +159,7 @@ routes.get("/get", async(req, res) => {
             // }],
             order: [['createdAt', 'DESC'], /* ['name', 'ASC'],*/] 
         });
+        console.log(result.dataValues)
         res.json({status:'success', result:result});
     }
     catch (error) {
