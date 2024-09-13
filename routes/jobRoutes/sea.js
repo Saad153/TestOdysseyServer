@@ -238,10 +238,14 @@ routes.post("/create", async(req, res) => {
       order:[['jobId','DESC']], attributes:["jobId"],
       where:{operation:data.operation, companyId:data.companyId}
     });
+    let currentYear = moment().format("YY");
+    if (moment().month() >= 6) {
+      currentYear = moment().add(1, 'year').format("YY");
+    }
     const result = await SE_Job.create({
       ...data,
       jobId:check==null?1:parseInt(check.jobId)+1,
-      jobNo:`${data.companyId=="1"?"SNS":data.companyId=="2"?"CLS":"ACS"}-${data.operation}${data.operation=="SE"?"J":data.operation=="SI"?"J":""}-${check==null?1:parseInt(check.jobId)+1}/${moment().format("YY")}`
+      jobNo: `${data.companyId == "1" ? "SNS" : data.companyId == "2" ? "CLS" : "ACS"}-${data.operation}${data.operation == "SE" || data.operation == "SI" ? "J" : ""}-${check == null ? 1 : parseInt(check.jobId) + 1}/${currentYear}`
     }).catch((x)=>console.log(x.message))
     await SE_Equipments.bulkCreate(createEquip(data.equipments,  result.id)).catch((x)=>console.log(x))
     res.json({status:'success', result:await getJob(result.id)});

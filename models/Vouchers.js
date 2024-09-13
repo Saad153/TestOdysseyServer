@@ -46,6 +46,9 @@ module.exports = (sequelize, DataTypes) => {
         payTo:{
             type:DataTypes.STRING,
         },
+        voucherNarration:{
+            type:DataTypes.STRING
+        },
         costCenter:{
             type:DataTypes.STRING,
         },
@@ -79,6 +82,7 @@ module.exports = (sequelize, DataTypes) => {
         subType:{
             type:DataTypes.STRING,
         },
+
         createdBy:{
             type:DataTypes.STRING,
         },

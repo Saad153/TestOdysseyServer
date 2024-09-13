@@ -38,6 +38,17 @@ async function getAllAccounts(id){
   return result;
 };
 
+async function getAccount(id){
+  let result;
+  result = await Child_Account.findOne({
+    attributes:['id', 'title'],
+    
+    where:{id:id}
+  });
+  return result;
+}
+
+
 routes.post("/createParentAccount", async(req, res) => {
   try {
     // console.log(req.body)
@@ -250,6 +261,17 @@ routes.get("/getAllAccounts", async(req, res) => {
   }
 });
 
+routes.get("/getAccount", async(req, res) => {
+  try {
+    let result;
+    result = await getAccount(req.headers.id);
+    res.json({status:'success', result:result});
+  }
+  catch (error) {
+    res.json({status:'error', result:error});
+  }
+});
+
 routes.get("/getAccountsForTransaction", async(req, res) => {
     let obj = { };
     let ChildObj = { };
@@ -320,7 +342,7 @@ routes.get("/getAccountsForTransaction", async(req, res) => {
 routes.get("/getAccountsForTransactionVouchers", async(req, res) => {
   let obj = { };
   let ChildObj = { };
-  console.log(req.headers.type, '====')
+  // console.log(req.headers.type, '====')
   if(req.headers.type=="Bank") {
       ChildObj = {subCategory:'Bank'}
     } else if(req.headers.type=="Cash"){
@@ -392,7 +414,7 @@ routes.get("/getAccountsForTransactionVouchers", async(req, res) => {
 routes.get("/getAllChilds", async(req, res) => {
   try {
     const result = await Child_Account.findAll({
-      attributes:["title", "id","code"],
+      attributes:["title", "id","code","subCategory"],
       include:[{
         model:Parent_Account,
         where:{CompanyId:req.headers.companyid},
@@ -421,7 +443,6 @@ routes.get("/getAllParents", async(req, res) => {
 
 routes.get("/getAllParentswithChildsbyAccountId", async(req, res) => {
   try{
-    console.log("Running")
     const result = await Parent_Account.findAll({
       attributes:["title", "id", "code", "AccountId"],
       where:{CompanyId:req.headers.companyid},
@@ -702,7 +723,7 @@ routes.get("/voucherLedger", async(req, res) => {
       }
     })
     console.log("Result Done")
-    // console.log(result)
+    console.log(result)
 
     // const result = await Child_Account.findAll({
     //   where:{ParentAccountId:req.headers.id},
@@ -750,6 +771,7 @@ routes.get("/getByDate", async(req, res) => {
         }
       ]
     }) 
+    console.log("Result",result)
     res.json({status:'success', result:result});
   }
   catch (error) {
