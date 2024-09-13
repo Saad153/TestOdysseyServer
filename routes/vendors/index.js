@@ -34,6 +34,50 @@ const createChildAccounts = (list, name) => {
     return result;
 }
 
+routes.post("/addVendor", async(req, res)=>{
+    try{
+        // console.log(req.body)
+        const result = await Vendors.create(req.body)
+        console.log(result)
+        res.json({
+            status:'success', 
+            result:result.dataValues
+        });
+    }catch(e){
+        res.json({status:'error', result:e});
+        console.error(e)
+    }
+})
+
+routes.post("/createVendorAssociations", async(req, res) => {
+    console.log(req.body)
+    try{
+        const result1 = await Vendors.findOne({
+            attributes:['id', 'name'],
+            where:{
+                name: req.body.name
+            }
+        })
+        const ChAcc = await Child_Account.findOne({
+            where:{
+                id: req.body.ChildAccountId
+            },
+            attributes:['id', 'title', 'ParentAccountId'],
+        })
+        const result = await Vendor_Associations.create({
+            VendorId: result1.dataValues.id,
+            CompanyId: req.body.companyId,
+            ParentAccountId: ChAcc.dataValues.ParentAccountId,
+            ChildAccountId: ChAcc.dataValues.id
+        });        
+        console.log(result.dataValues)
+        res.json({status: 'success', result:result.dataValues});
+    }catch(e){
+        res.json({status:'error', result:e});
+        console.error(e)
+    }
+})
+
 routes.post("/create", async(req, res) => {
 
     try {
@@ -115,6 +159,7 @@ routes.get("/get", async(req, res) => {
             // }],
             order: [['createdAt', 'DESC'], /* ['name', 'ASC'],*/] 
         });
+        console.log(result.dataValues)
         res.json({status:'success', result:result});
     }
     catch (error) {

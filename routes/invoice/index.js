@@ -298,7 +298,6 @@ routes.get("/testResetSomeInvoices", async(req, res) => {
 });
 
 routes.get("/getAllInoivcesByPartyId", async(req, res) => {
-  console.log(req.headers.voucherid + " <<<<=================")
   try {
     let obj = {
       approved:"1",
@@ -313,7 +312,8 @@ routes.get("/getAllInoivcesByPartyId", async(req, res) => {
     }
     let transactionObj = [
       { 
-        model:SE_Job,  
+        model:SE_Job, 
+        required: false, 
         attributes:['id', 'jobNo', 'subType'],
         include:[
           {
@@ -333,10 +333,10 @@ routes.get("/getAllInoivcesByPartyId", async(req, res) => {
     ];
     if(req.headers.edit=='true'){
       obj.id = req.headers.invoices.split(", ")
-      transactionObj = [
+      req.headers.voucherid?transactionObj = [
         ...transactionObj,
         { model:Invoice_Transactions, where:{VoucherId:req.headers.voucherid} }
-      ]
+      ]:null
     } else {
       obj.status = { [Op.ne]: '2' }
     }
@@ -345,7 +345,7 @@ routes.get("/getAllInoivcesByPartyId", async(req, res) => {
       attributes:['id','invoice_No', 'invoice_Id', 'payType', 'recieved', 'paid', 'status', 'total', 'currency', 'roundOff', 'party_Id', 'operation', 'ex_rate'],
       order:[['invoice_Id', 'ASC']],
       include:transactionObj
-    });
+    })
     let partyAccount = null;
     if(result.length>0){
       if(req.headers.party=="vendor"){
@@ -797,7 +797,7 @@ routes.get("/jobBalancing", async (req, res) => {
       invoiceObj.payType=req.headers.paytype
     }
     // party wise invoice/bill
-    req.headers.party?invoiceObj.party_Id=req.headers.party:null;
+    req.headers.party?invoiceObj.party_Id=req.headers.party:req.headers.overseasagent?invoiceObj.party_Id=req.headers.overseasagent:null;
     // Company wise invoice/bill
     if(req.headers.company=='4'){
       invoiceObj = {
@@ -815,6 +815,7 @@ routes.get("/jobBalancing", async (req, res) => {
     // To include the Job, Bl & Equipments data in the invoices
     let includeObj = {
       model:SE_Job,
+      required:false,
       include:[
         { model:Clients, attributes:['code','name'] },
         { model:Bl, attributes:['hbl','mbl'] },
@@ -959,10 +960,12 @@ routes.post("/uploadbulkInvoicesTest", async (req, res) => {
 // For Data Backup
 routes.post("/createBulkInvoices", async (req, res) => {
   try {
-    await Invoice.bulkCreate(req.body)
+    console.log(req.body)
+    const result = await Invoice.create(req.body)
     .catch((x)=>{
       console.log(x)
     })
+    console.log(result.dataValues)
     await res.json({ status: "success" });
   } catch (error) {
     console.log(error)

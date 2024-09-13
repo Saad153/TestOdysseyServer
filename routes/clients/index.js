@@ -32,6 +32,57 @@ const createAccountList = (parent, child, id) => {
     return result;
 }
 
+routes.post("/addClient", async(req, res)=>{
+    try{
+        // console.log(req.body)
+        const result = await Clients.create(req.body)
+        console.log(result)
+        res.json({
+            status:'success', 
+            result:result.dataValues
+        });
+    }catch(e){
+        res.json({status:'error', result:e});
+        console.error(e)
+    }
+})
+
+routes.post("/createClientAssociations", async(req, res) => {
+    try{
+        const result1 = await Clients.findOne({
+            attributes:['id', 'name'],
+            where:{
+                name: req.body.name
+            }
+        })
+        const ChAcc = await Child_Account.findOne({
+            where:{
+                id: req.body.ChildAccountId
+            },
+            attributes:['id', 'title', 'ParentAccountId'],
+        })
+        // for(let x of result1){
+        //     console.log(x.dataValues)
+
+        // }
+        // console.log(result1.dataValues.id)
+        // console.log(req.body.companyId)
+        // console.log(ChAcc.dataValues.ParentAccountId)
+        // console.log(ChAcc.dataValues.id)
+        const result = await Client_Associations.create({
+            ClientId: result1.dataValues.id,
+            CompanyId: req.body.companyId,
+            ParentAccountId: ChAcc.dataValues.ParentAccountId,
+            ChildAccountId: ChAcc.dataValues.id
+        });        
+        console.log(result.dataValues)
+        res.json({status: 'success', result:result.dataValues});
+    }catch(e){
+        res.json({status:'error', result:e});
+        console.error(e)
+    }
+})
+
 routes.post("/createClient", async(req, res) => {
     
     try {
@@ -55,11 +106,20 @@ routes.post("/createClient", async(req, res) => {
             attributes:['code'],
             order: [ [ 'createdAt', 'DESC' ]]
         })
+        if(!check){
+            check.code = 0
+        }
         value.accountRepresentatorId = value.accountRepresentatorId==""?null:value.accountRepresentatorId;
         value.salesRepresentatorId = value.salesRepresentatorId==""?null:value.salesRepresentatorId;
         value.docRepresentatorId = value.docRepresentatorId==""?null:value.docRepresentatorId;
         value.authorizedById = value.authorizedById==""?null:value.authorizedById;
-        const result = await Clients.create({...value, code : parseInt(check.code) + 1 }).catch((x)=>console.log(x))
+        try{
+            console.log(value)
+            const result = await Clients.create({...value, code : parseInt(check.code) + 1 })   
+            // console.log(result)
+        }catch(e){
+            console.log(e)
+        }
         const accounts = await Parent_Account.findAll({
             where: { title: { [Op.or]: [`${req.body.pAccountName}`] } }
         });

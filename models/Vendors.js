@@ -33,7 +33,7 @@ module.exports = (sequelize, DataTypes) => {
         currency: { type:DataTypes.STRING },
         createdBy:{ type:DataTypes.STRING },
         active:{
-          type:DataTypes.BOOLEAN,
+          type:DataTypes.BOOLEAN
           // defaultValue:0.0
         },
     })
