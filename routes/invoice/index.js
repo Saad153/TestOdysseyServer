@@ -166,17 +166,20 @@ routes.get("/getJobInvoices", async(req, res) => {
 
 routes.get("/getFilteredInvoices", async(req, res) => {
   try {
+    console.log(req.headers.type)
     const result = await Invoice.findAll({
       where:{type:req.headers.type},
       attributes:['id', 'invoice_No', 'status', 'operation', 'currency', 'ex_rate', 'party_Name', 'total', 'partyType', 'approved'],
       include:[
-      { model:SE_Job, attributes:['jobNo'] },
+      { model:SE_Job, required: false, attributes:['jobNo'] },
       {
         model:Charge_Head,
+        required: false,
         attributes:['charge'],
         where:{charge:{ [Op.ne]: null }}
       }]
     })
+    console.log(result)
     res.json({status:'success', result:result});
   } catch (error) {
     res.json({status:'error', result:error});
