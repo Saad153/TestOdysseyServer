@@ -36,6 +36,16 @@ routes.get(`/${url}/get`, async(req, res) => {
               [Op.lte]: moment(req.headers.to).add(1, 'days').toDate(),
             }
           },
+          include:[{
+            model:Vouchers,
+            attributes:['vType', 'type', 'exRate'],
+            where:{
+              createdAt: {
+                [Op.gte]: moment(req.headers.from).toDate(),
+                [Op.lte]: moment(req.headers.to).add(1, 'days').toDate(),
+              }
+            }
+          }]
         }]
       }],
     });
