@@ -302,6 +302,7 @@ routes.get("/testResetSomeInvoices", async(req, res) => {
 
 routes.get("/getAllInoivcesByPartyId", async(req, res) => {
   try {
+    console.log(req.headers)
     let obj = {
       approved:"1",
       party_Id:req.headers.id,
@@ -341,7 +342,7 @@ routes.get("/getAllInoivcesByPartyId", async(req, res) => {
         { model:Invoice_Transactions, where:{VoucherId:req.headers.voucherid} }
       ]:null
     } else {
-      obj.status = { [Op.ne]: '2' }
+      // obj.status = { [Op.ne]: '2' }
     }
     const result = await Invoice.findAll({
       where:obj,
@@ -364,7 +365,7 @@ routes.get("/getAllInoivcesByPartyId", async(req, res) => {
               include:[
                 {
                   model:Parent_Account,
-                  //where:{ title:req.headers.pay=="Recievable"?"ACCOUNT RECEIVABLE":"ACCOUNT PAYABLE" }
+                  where:{ title:req.headers.pay=="Receivable"?"ACCOUNT RECEIVABLE":"ACCOUNT PAYABLE" }
                 }
               ]
             }
@@ -410,7 +411,7 @@ routes.get("/getAllInoivcesByPartyId", async(req, res) => {
         });
       }
     }
-
+    console.log(">>>>",result)
     res.json({ status:'success', result:result, account:partyAccount });
   } catch (error) {
 
@@ -420,6 +421,7 @@ routes.get("/getAllInoivcesByPartyId", async(req, res) => {
 
 routes.get("/getAllOldInoivcesByPartyId", async(req, res) => {
   try {
+    console.log("Old Invoices",req.headers)
     const result = await Invoice.findAll({
       where:{
         approved:"1",
@@ -494,6 +496,7 @@ routes.get("/getAllOldInoivcesByPartyId", async(req, res) => {
         });
       }
     }
+    console.log(">>>",result)
       res.json({ status:'success', result:result, account:partyAccount });
     }
     catch (error) {
@@ -960,15 +963,72 @@ routes.post("/uploadbulkInvoicesTest", async (req, res) => {
   }
 });
 
+const setVoucherHeads = (id, heads) => {
+  let result = [];
+  heads.forEach((x) => {
+    result.push({
+      ...x,
+      VoucherId: id,
+      amount: `${x.amount}`
+    });
+  });
+  return result;
+};
+
 // For Data Backup
 routes.post("/createBulkInvoices", async (req, res) => {
   try {
-    console.log(req.body)
-    const result = await Invoice.create(req.body)
-    .catch((x)=>{
-      console.log(x)
+    // console.log(req.body)
+    temp = req.body
+    voucher = temp.voucher
+    delete temp.voucher
+    const result = await Invoice.create(temp)
+    console.log("Invoice: ",result.dataValues)
+    const resultC = await Client_Associations.findOne({
+      where:{ClientId:req.body.party_Id},
     })
-    console.log(result.dataValues)
+    const resultV = await Vendor_Associations.findOne({
+      where:{VendorId:req.body.party_Id},
+    })
+    resultC?resultC.dataValues?console.log("Account ID:",resultC.dataValues):console.log("Account ID:",resultC):console.log(">>>>Null")
+    resultV?resultV.dataValues?console.log("Account ID:",resultV.dataValues):console.log("Account ID:",resultV):console.log(">>>>Null")
+    voucher.Voucher_Heads.forEach((x)=>{
+      x.ChildAccountId = resultC?resultC.dataValues.ChildAccountId:resultV.dataValues.ChildAccountId
+      x.narration = req.body.invoice_No 
+    })
+    const check = await Vouchers.findOne({
+      order: [["voucher_No", "DESC"]],
+      attributes: ["voucher_No"],
+      where: { vType: voucher.vType, CompanyId: voucher.CompanyId }
+    });
+    const resultTwo = await Vouchers.create({
+      ...voucher,
+      voucher_No: check == null ? 1 : parseInt(check.voucher_No) + 1,
+      // voucher_Id: `${req.body.CompanyId == 1 ?
+      //     "SNS" :
+      //     req.body.CompanyId == 2 ?
+      //       "CLS" : "ACS"
+      //   }-${req.body.vType}-${check == null ? 1 : parseInt(check.voucher_No) + 1
+      //   }/${moment().format("YY")}`,
+      voucher_Id: `${voucher.CompanyId == 1 ? "SNS" : voucher.CompanyId == 2 ? "CLS" : "ACS"
+      }-${voucher.vType
+      }-${check == null ? 1 : parseInt(check.voucher_No) + 1
+      }/${moment().month() >= 6 ? moment().add(1, 'year').format('YY') : moment().format('YY')}`,
+    
+
+    })
+    console.log(resultTwo.dataValues)
+    const resultThree = await Invoice_Transactions.create({
+      gainLoss: result.dataValues.payType=="Receivable"?(result.dataValues.total - result.dataValues.recieved):(result.dataValues.total - result.dataValues.paid),
+      amount: result.dataValues.total,
+      createdAt: result.dataValues.createdAt,
+      InvoiceId: result.dataValues.id,
+      VoucherId: resultTwo.dataValues.id
+    }).then((x) => console.log(x.dataValues))
+
+    let dataz = await setVoucherHeads(resultTwo.id, voucher.Voucher_Heads);
+    const datab = await Voucher_Heads.bulkCreate(dataz);
+    console.log(datab.dataValues)
     await res.json({ status: "success" });
   } catch (error) {
     console.log(error)

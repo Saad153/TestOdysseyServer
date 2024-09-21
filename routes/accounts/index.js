@@ -703,6 +703,8 @@ routes.get("/balanceSheet", async(req, res) => {
 
 routes.get("/voucherLedger", async(req, res) => {
   try {
+    console.log(req.headers)
+    const currencyCondition = req.headers.currency!=""?{ currency:req.headers.currency }:null
     const childAccountCondition = req.headers.id
       ? { ChildAccountId: req.headers.id }
       : { ChildAccountId: { [Op.ne]: null } };
@@ -718,7 +720,8 @@ routes.get("/voucherLedger", async(req, res) => {
         model:Vouchers,
         where:{
           CompanyId: req.headers.companyid, 
-          currency:req.headers.currency
+          // currency:req.headers.currency!=""?req.headers.currency:null
+          ...currencyCondition
         },
       }
     })
@@ -782,25 +785,33 @@ routes.get("/getByDate", async(req, res) => {
 routes.get("/getLedger", async(req, res) => {
   try {
     console.log(req.headers)
-    console.log(req.body)
+    const currencyCondition = req.headers.currency!=""?{ currency:req.headers.currency }:null
+
     const childAccountCondition = req.headers.id!='undefined'
       ? { ChildAccountId: req.headers.id }
       : { ChildAccountId: { [Op.ne]: null } };
+    const condition = req.headers.old=="true"
+      ? { type: "Opening Invoice" }  // If old is true
+      : { type: { [Op.ne]: "Opening Invoice" } };  // If old is false (exclude "Old Invoice")
+    // console.log(condition) 
     const result = await Voucher_Heads.findAll({
       raw:true,
       where:{
         ...childAccountCondition,
         createdAt:{
           [Op.lte]: moment(req.headers.to).add(1, 'days').toDate(),
-        }
+        },
+
       },
       attributes:['amount', 'type', 'narration', 'createdAt', 'defaultAmount'],
       include:[{
         model:Vouchers,
         attributes:['voucher_Id', 'id', 'type', 'currency', 'exRate', 'vType'],
         where:{
-          currency:req.headers.currency,
-          CompanyId: req.headers.company
+          // currency:req.headers.currency?req.headers.currency:null,
+          ...currencyCondition,
+          CompanyId: req.headers.company,
+          ...condition
         }
       },
       {

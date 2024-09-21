@@ -3,7 +3,7 @@ const { Employees, Access_Levels, Company } = require("../../../models")
 
 Employees.hasMany(Access_Levels, {
     foriegnKey:{
-        type: DataTypes.UUID,
+        type: DataTypes.INTEGER,
         allowNull:false
     }
 });

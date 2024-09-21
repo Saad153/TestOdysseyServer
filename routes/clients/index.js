@@ -350,6 +350,33 @@ routes.get("/experimentalQuery", async(req, res) => {
 //     }
 // });
 
+routes.get("/getChildAccounts", async(req, res) => {
+    try {
+        const result = await Client_Associations.findOne({
+            where: {
+                id: req.headers.id
+            },
+        });
+        const result1 = await Vendor_Associations.findOne({
+            where: {
+                id: req.headers.id
+            }
+        })
+        if(result){
+            console.log(result)
+            res.json({status:'success', result:result});
+        }
+        if(result1){   
+            console.log(result1)
+            res.json({status:'success', result:result1});
+        }
+    }
+    catch (error) {
+        console.log(error)
+      res.json({status:'error', result:error});
+    }
+})
+
 routes.post("/findAccounts", async(req, res) => {
     try {
         console.log(req.body);

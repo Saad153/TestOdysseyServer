@@ -343,8 +343,8 @@ routes.get("/getAllJobPayRecVouchers", async (req, res) => {
       where: {
         CompanyId:req.headers.companyid,
         [Op.or]: [
-          { type: "Job Reciept" },
-          { type: "Job Payment" },
+          { type: "Opening Invoice" },
+          { type: "Opening Bill" },
         ],
       },
       include: [{
