@@ -144,15 +144,15 @@ routes.post("/createChildAccount", async(req, res) => {
       }else{
         newCode = (parseInt(code)*10000)+1
       }
-      
 
       let values = req.body
+      values.subCategory = req.body.category
       values.editable=0
       values.code=newCode.toString()
       values.ParentAccountId = req.body.ParentAccountId
       console.log(values)
       const result3 = await Child_Account.create(values);
-      // console.log(result3)
+      // console.log(result3.dataValues)
       let val;
       // val = await getAllAccounts(req.body.CompanyId);
       val = await Child_Account.findOne({
@@ -160,7 +160,7 @@ routes.post("/createChildAccount", async(req, res) => {
           code: newCode.toString()
         }
       })
-      console.log(val)
+      // console.log(val)
       res.json({status:'success', result:val});
     }
   }
