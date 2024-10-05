@@ -708,9 +708,11 @@ routes.get("/voucherLedger", async(req, res) => {
     const childAccountCondition = req.headers.id
       ? { ChildAccountId: req.headers.id }
       : { ChildAccountId: { [Op.ne]: null } };
+      const oldCondition = req.headers.old!=true?{ type: { [Op.ne]: "Opening Invoice" } }:{ type: "Opening Invoice" }
     const result = await Voucher_Heads.count({
       where:{
         ...childAccountCondition,
+        ...oldCondition,
         createdAt:{
           [Op.gte]: moment(req.headers.from).toDate(),
           [Op.lte]: moment(req.headers.to).add(1, 'days').toDate(),

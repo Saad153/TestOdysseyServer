@@ -983,15 +983,21 @@ routes.post("/createBulkInvoices", async (req, res) => {
     voucher = temp.voucher
     delete temp.voucher
     const result = await Invoice.create(temp)
-    console.log("Invoice: ",result.dataValues)
+    // console.log("Invoice Created")
     const resultC = await Client_Associations.findOne({
-      where:{ClientId:req.body.party_Id},
+      where:{
+        ClientId:req.body.party_Id,
+        CompanyId: req.body.companyId
+      },
     })
+    // resultC?console.log("Client Found"):null
     const resultV = await Vendor_Associations.findOne({
-      where:{VendorId:req.body.party_Id},
+      where:{
+        VendorId:req.body.party_Id,
+        CompanyId: req.body.companyId
+      },
     })
-    resultC?resultC.dataValues?console.log("Account ID:",resultC.dataValues):console.log("Account ID:",resultC):console.log(">>>>Null")
-    resultV?resultV.dataValues?console.log("Account ID:",resultV.dataValues):console.log("Account ID:",resultV):console.log(">>>>Null")
+    // resultV?console.log("Vendor Found"):null
     voucher.Voucher_Heads.forEach((x)=>{
       x.ChildAccountId = resultC?resultC.dataValues.ChildAccountId:resultV.dataValues.ChildAccountId
       x.narration = req.body.invoice_No 
@@ -1004,31 +1010,25 @@ routes.post("/createBulkInvoices", async (req, res) => {
     const resultTwo = await Vouchers.create({
       ...voucher,
       voucher_No: check == null ? 1 : parseInt(check.voucher_No) + 1,
-      // voucher_Id: `${req.body.CompanyId == 1 ?
-      //     "SNS" :
-      //     req.body.CompanyId == 2 ?
-      //       "CLS" : "ACS"
-      //   }-${req.body.vType}-${check == null ? 1 : parseInt(check.voucher_No) + 1
-      //   }/${moment().format("YY")}`,
       voucher_Id: `${voucher.CompanyId == 1 ? "SNS" : voucher.CompanyId == 2 ? "CLS" : "ACS"
       }-${voucher.vType
       }-${check == null ? 1 : parseInt(check.voucher_No) + 1
       }/${moment().month() >= 6 ? moment().add(1, 'year').format('YY') : moment().format('YY')}`,
-    
-
     })
-    console.log(resultTwo.dataValues)
+    // console.log("Voucher Created")
     const resultThree = await Invoice_Transactions.create({
       gainLoss: result.dataValues.payType=="Receivable"?(result.dataValues.total - result.dataValues.recieved):(result.dataValues.total - result.dataValues.paid),
       amount: result.dataValues.total,
       createdAt: result.dataValues.createdAt,
       InvoiceId: result.dataValues.id,
       VoucherId: resultTwo.dataValues.id
-    }).then((x) => console.log(x.dataValues))
+    })
+    // console.log("Invoice Transaction Created")
 
     let dataz = await setVoucherHeads(resultTwo.id, voucher.Voucher_Heads);
     const datab = await Voucher_Heads.bulkCreate(dataz);
-    console.log(datab.dataValues)
+    // console.log("Voucher Heads Created")
+    // datab.dataValues?console.log(datab.dataValues):null
     await res.json({ status: "success" });
   } catch (error) {
     console.log(error)

@@ -21,7 +21,7 @@ routes.post("/login", async(req, res)=>{
       include:[
         { model:Access_Levels, attributes:['access_name'] }
     ]})
-    console.log(users)
+    // console.log(users)
     if(users){
       if(password==users.password){
         const payload = { designation:users.designation, username:`${users.name}`,loginId:`${users.id}`, access:makeAccessList(users.Access_Levels)}

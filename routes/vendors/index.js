@@ -238,4 +238,18 @@ routes.post("/findAccounts", async(req, res) => {
     }
 });
 
+routes.get("/getVendorAssociations", async(req, res) => {
+    try {
+        const result = await Vendor_Associations.findAll({
+            where: {
+                CompanyId: req.headers.company
+            },
+        });
+        res.json({status:'success', result:result});
+    }
+    catch (error) {
+      res.json({status:'error', result:error});
+    }
+});
+
 module.exports = routes;

@@ -396,4 +396,20 @@ routes.post("/findAccounts", async(req, res) => {
     }
 });
 
+routes.get("/getClientAssociations", async(req, res) => {
+    try {
+        // console.log(req.headers)
+        const result = await Client_Associations.findAll({
+            where: {
+                CompanyId: req.headers.company
+            },
+        });
+        res.json({status:'success', result:result});
+    }
+    catch (error) {
+        console.log(error)
+        res.json({status:'error', result:error});
+    }
+});
+
 module.exports = routes;

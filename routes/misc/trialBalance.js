@@ -25,19 +25,20 @@ routes.get(`/${url}/get`, async(req, res) => {
       include:[{
         model:Child_Account,
         attributes:['id', 'title'],
-        // order: [[{ model: Voucher_Heads }, 'createdAt', 'DESC']],
         include:[{
           model:Voucher_Heads,
-          // order: [['createdAt', 'ASC']],
           attributes:['amount', 'defaultAmount', 'type', 'accountType', 'settlement', 'createdAt'],
           where:{
+            narration: {
+              [Op.ne]: "Opening Balance"
+            },
             createdAt: {
-              // [Op.gte]: moment(req.headers.from).toDate(),
               [Op.lte]: moment(req.headers.to).add(1, 'days').toDate(),
             }
           },
           include:[{
             model:Vouchers,
+            // required: false,
             attributes:['vType', 'type', 'exRate'],
             where:{
               createdAt: {
@@ -49,6 +50,14 @@ routes.get(`/${url}/get`, async(req, res) => {
         }]
       }],
     });
+    // result.forEach((x) => {
+    //   x.dataValues.Child_Accounts.forEach((y) => {
+    //     y.dataValues.Voucher_Heads.forEach((z) => {
+    //       console.log(z.dataValues)
+    //     })
+    //   })
+    // })
+    // console.log(result.dataValues)
     res.json({status:'success', result:result});
   }
   catch (error) {
