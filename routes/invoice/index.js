@@ -302,7 +302,6 @@ routes.get("/testResetSomeInvoices", async(req, res) => {
 
 routes.get("/getAllInoivcesByPartyId", async(req, res) => {
   try {
-    console.log(req.headers)
     let obj = {
       approved:"1",
       party_Id:req.headers.id,
@@ -353,7 +352,6 @@ routes.get("/getAllInoivcesByPartyId", async(req, res) => {
     let partyAccount = null;
     if(result.length>0){
       if(req.headers.party=="vendor"){
-        console.log("================Vendor HERE===================")
         partyAccount = await Vendor_Associations.findAll({
           where:{
             VendorId:result[0].party_Id,
@@ -372,7 +370,6 @@ routes.get("/getAllInoivcesByPartyId", async(req, res) => {
           ]
         })
       } else if(req.headers.party=="agent"){
-        console.log("================Agent HERE===================")
         partyAccount = await Vendor_Associations.findAll({
           where:{
             VendorId:result[0].party_Id,
@@ -391,7 +388,6 @@ routes.get("/getAllInoivcesByPartyId", async(req, res) => {
           ]
         })
       } else {
-        console.log("================Client HERE===================")
         partyAccount = await Client_Associations.findAll({
           where:{ 
             ClientId:result[0].party_Id, 
@@ -411,7 +407,6 @@ routes.get("/getAllInoivcesByPartyId", async(req, res) => {
         });
       }
     }
-    console.log(">>>>",result)
     res.json({ status:'success', result:result, account:partyAccount });
   } catch (error) {
 

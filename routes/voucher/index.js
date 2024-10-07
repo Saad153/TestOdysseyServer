@@ -114,22 +114,16 @@ routes.post("/voucherCreation", async (req, res) => {
     const result = await Vouchers.create({
       ...req.body,
       voucher_No: check == null ? 1 : parseInt(check.voucher_No) + 1,
-      // voucher_Id: `${req.body.CompanyId == 1 ?
-      //     "SNS" :
-      //     req.body.CompanyId == 2 ?
-      //       "CLS" : "ACS"
-      //   }-${req.body.vType}-${check == null ? 1 : parseInt(check.voucher_No) + 1
-      //   }/${moment().format("YY")}`,
       voucher_Id: `${req.body.CompanyId == 1 ? "SNS" : req.body.CompanyId == 2 ? "CLS" : "ACS"
       }-${req.body.vType
       }-${check == null ? 1 : parseInt(check.voucher_No) + 1
       }/${moment().month() >= 6 ? moment().add(1, 'year').format('YY') : moment().format('YY')}`,
     
 
-    }).catch((x) => console.log(x))
+    }).catch((x) => console.log("Vouchers>>",x))
 
     let dataz = await setVoucherHeads(result.id, req.body.Voucher_Heads);
-    await Voucher_Heads.bulkCreate(dataz);
+    const VH = await Voucher_Heads.bulkCreate(dataz);
     res.json({ status: "success", result: result });
   } catch (error) {
     console.log(error)
