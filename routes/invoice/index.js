@@ -1004,6 +1004,8 @@ routes.post("/createBulkInvoices", async (req, res) => {
     });
     const resultTwo = await Vouchers.create({
       ...voucher,
+      partyId: req.body.party_Id,
+      partyName: req.body.party_Name,
       voucher_No: check == null ? 1 : parseInt(check.voucher_No) + 1,
       voucher_Id: `${voucher.CompanyId == 1 ? "SNS" : voucher.CompanyId == 2 ? "CLS" : "ACS"
       }-${voucher.vType

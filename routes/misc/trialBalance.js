@@ -19,6 +19,11 @@ routes.get(`/${url}/get`, async(req, res) => {
     if(req.headers.accountid){
       obj.id = req.headers.accountid
     }
+    const condition = req.headers.old=="true"
+      ? { type: "Opening Invoice" }  // If old is true
+      : { type: { [Op.ne]: "Opening Invoice" } };
+    
+    console.log(req.headers.accountid)
     const result = await Parent_Account.findAll({
       attributes:['id', 'title'],
       where:obj,
@@ -29,9 +34,9 @@ routes.get(`/${url}/get`, async(req, res) => {
           model:Voucher_Heads,
           attributes:['amount', 'defaultAmount', 'type', 'accountType', 'settlement', 'createdAt'],
           where:{
-            narration: {
-              [Op.ne]: "Opening Balance"
-            },
+            // narration: {
+            //   [Op.ne]: "Opening Balance"
+            // },
             createdAt: {
               [Op.lte]: moment(req.headers.to).add(1, 'days').toDate(),
             }
@@ -41,6 +46,7 @@ routes.get(`/${url}/get`, async(req, res) => {
             // required: false,
             attributes:['vType', 'type', 'exRate'],
             where:{
+              ...condition,
               createdAt: {
                 [Op.gte]: moment(req.headers.from).toDate(),
                 [Op.lte]: moment(req.headers.to).add(1, 'days').toDate(),

@@ -796,18 +796,24 @@ routes.get("/getLedger", async(req, res) => {
       ? { type: "Opening Invoice" }  // If old is true
       : { type: { [Op.ne]: "Opening Invoice" } };  // If old is false (exclude "Old Invoice")
     // console.log(condition) 
+    console.log(childAccountCondition)
+    console.log(condition)
+    console.log(currencyCondition)
+    console.log(req.headers.company)
+    console.log(moment(req.headers.to).add(1, 'days').toDate())
     const result = await Voucher_Heads.findAll({
       raw:true,
       where:{
         ...childAccountCondition,
-        createdAt:{
-          [Op.lte]: moment(req.headers.to).add(1, 'days').toDate(),
-        },
+        // createdAt:{
+        //   [Op.lte]: moment(req.headers.to).add(1, 'days').toDate(),
+        // },
 
       },
       attributes:['amount', 'type', 'narration', 'createdAt', 'defaultAmount'],
       include:[{
         model:Vouchers,
+        // required: false,
         attributes:['voucher_Id', 'id', 'type', 'currency', 'exRate', 'vType'],
         where:{
           // currency:req.headers.currency?req.headers.currency:null,
@@ -822,6 +828,7 @@ routes.get("/getLedger", async(req, res) => {
       }],
       order:[["createdAt","ASC"]],
     })
+    console.log(result)
     res.json({status:'success', result:result});
   } catch (error) {
     console.log(error)
