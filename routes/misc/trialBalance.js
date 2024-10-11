@@ -44,9 +44,9 @@ routes.get(`/${url}/get`, async(req, res) => {
           include:[{
             model:Vouchers,
             // required: false,
-            attributes:['vType', 'type', 'exRate'],
+            attributes:['vType', 'type', 'exRate', 'currency'],
             where:{
-              ...condition,
+              // ...condition,
               createdAt: {
                 [Op.gte]: moment(req.headers.from).toDate(),
                 [Op.lte]: moment(req.headers.to).add(1, 'days').toDate(),
