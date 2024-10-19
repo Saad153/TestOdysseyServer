@@ -103,49 +103,41 @@ routes.get("/OfficeAllVouchers", async (req, res) => {
   }
 });
 
+routes.get("/getAllVoucehrHeads", async (req, res) => {
+  try{
+    const result = await Voucher_Heads.findAll({
+      include: [
+        {
+          model: Vouchers,
+        },
+      ],
+    });
+    
+    res.json({ status: "success", result: result });
+  }catch (error) {
+    console.log(error)
+    res.json({ status: "error", result: error });
+  }
+})
+
 routes.post("/voucherCreation", async (req, res) => {
   try {
-    
-    console.log(req.body)
     const check = await Vouchers.findOne({
       order: [["voucher_No", "DESC"]],
       attributes: ["voucher_No"],
       where: { vType: req.body.vType, CompanyId: req.body.CompanyId }
     });
-    const clients = await Client_Associations.findOne({
-      where:{
-        ChildAccountId:req.body.partyId,
-        CompanyId: req.body.CompanyId
-      },
-    })
-    const vendors = await Vendor_Associations.findOne({
-      where:{
-        ChildAccountId:req.body.partyId,
-        CompanyId: req.body.CompanyId
-      },
-    })
-
-    if(clients || vendors){
-      console.log(req.body.partyName)
-      return res.json({ status: "error", result: req.body.partyName });
-    }else{
       const result = await Vouchers.create({
         ...req.body,
         voucher_No: check == null ? 1 : parseInt(check.voucher_No) + 1,
-        voucher_Id: `${req.body.CompanyId == 1 ? "SNS" : req.body.CompanyId == 2 ? "CLS" : "ACS"
+        voucher_Id: !req.body.voucher_Id?`${req.body.CompanyId == 1 ? "SNS" : req.body.CompanyId == 2 ? "CLS" : "ACS"
         }-${req.body.vType
         }-${check == null ? 1 : parseInt(check.voucher_No) + 1
-        }/${moment().month() >= 6 ? moment().add(1, 'year').format('YY') : moment().format('YY')}`,
-      
-  
+        }/${moment().month() >= 6 ? moment().add(1, 'year').format('YY') : moment().format('YY')}`:req.body.voucher_Id,
       }).catch((x) => console.log("Vouchers>>",x))
-  
       let dataz = await setVoucherHeads(result.id, req.body.Voucher_Heads);
       const VH = await Voucher_Heads.bulkCreate(dataz);
       res.json({ status: "success", result: result });
-    }
-
-
   } catch (error) {
     console.log(error)
     res.json({ status: "error", result: error });

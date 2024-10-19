@@ -47,7 +47,7 @@ module.exports = (sequelize, DataTypes) => {
             type:DataTypes.STRING,
         },
         voucherNarration:{
-            type:DataTypes.STRING
+            type:DataTypes.TEXT
         },
         costCenter:{
             type:DataTypes.STRING,

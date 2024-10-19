@@ -30,7 +30,7 @@ async function getAllAccounts(id){
       attributes:['id', 'title', 'editable', 'AccountId', 'CompanyId', 'code'],
       include:[{
         model:Child_Account,
-        attributes:['id', 'title', 'ParentAccountId', 'createdAt', 'editable', 'code'],
+        attributes:['id', 'title', 'ParentAccountId', 'createdAt', 'editable', 'code', 'subCategory'],
         order: [['id', 'DESC']],
       }]
     }]
@@ -704,7 +704,7 @@ routes.get("/balanceSheet", async(req, res) => {
 routes.get("/voucherLedger", async(req, res) => {
   try {
     console.log(req.headers)
-    const currencyCondition = req.headers.currency!=""?{ currency:req.headers.currency }:null
+    const currencyCondition = req.headers.currency!="ALL"?{ currency:req.headers.currency }:null
     const childAccountCondition = req.headers.id
       ? { ChildAccountId: req.headers.id }
       : { ChildAccountId: { [Op.ne]: null } };
@@ -720,6 +720,7 @@ routes.get("/voucherLedger", async(req, res) => {
       },
       include:{
         model:Vouchers,
+        required: false,
         where:{
           CompanyId: req.headers.companyid, 
           // currency:req.headers.currency!=""?req.headers.currency:null
@@ -787,17 +788,12 @@ routes.get("/getByDate", async(req, res) => {
 routes.get("/getLedger", async(req, res) => {
   try {
     console.log(req.headers)
-    const currencyCondition = req.headers.currency!=""?{ currency:req.headers.currency }:null
+    const currencyCondition = req.headers.currency!="ALL"?{ currency:req.headers.currency }:null
 
     const childAccountCondition = req.headers.id!='undefined'
       ? { ChildAccountId: req.headers.id }
-      : { ChildAccountId: { [Op.ne]: null } };
-    const condition = req.headers.old=="true"
-      ? { type: "Opening Invoice" }  // If old is true
-      : { type: { [Op.ne]: "Opening Invoice" } };  // If old is false (exclude "Old Invoice")
-    // console.log(condition) 
+      : { ChildAccountId: { [Op.ne]: null } };  // If old is false (exclude "Old Invoice")
     console.log(childAccountCondition)
-    console.log(condition)
     console.log(currencyCondition)
     console.log(req.headers.company)
     console.log(moment(req.headers.to).add(1, 'days').toDate())
@@ -805,21 +801,20 @@ routes.get("/getLedger", async(req, res) => {
       raw:true,
       where:{
         ...childAccountCondition,
-        // createdAt:{
-        //   [Op.lte]: moment(req.headers.to).add(1, 'days').toDate(),
-        // },
+        createdAt:{
+          [Op.lte]: moment(req.headers.to).add(1, 'days').toDate(),
+        },
 
       },
       attributes:['amount', 'type', 'narration', 'createdAt', 'defaultAmount'],
       include:[{
         model:Vouchers,
-        // required: false,
+        required: false,
         attributes:['voucher_Id', 'id', 'type', 'currency', 'exRate', 'vType'],
         where:{
           // currency:req.headers.currency?req.headers.currency:null,
           ...currencyCondition,
           CompanyId: req.headers.company,
-          ...condition
         }
       },
       {

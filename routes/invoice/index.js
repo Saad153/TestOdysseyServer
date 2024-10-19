@@ -970,6 +970,69 @@ const setVoucherHeads = (id, heads) => {
   return result;
 };
 
+routes.post("/uploadbulkInvoices", async (req, res) => {
+  try {
+    // console.log(req.body)
+    temp = req.body
+    voucher = temp.voucher
+    delete temp.voucher
+    let result
+    try{
+      result = await Invoice.create(temp)
+
+    }catch(e){
+      console.log("Invoice creater",e)
+    }
+    let vouchers
+    let invoiceNo = temp.invoice_No.slice(0, -2)
+    try{
+      console.log(invoiceNo)
+
+      vouchers = await Vouchers.findAll({
+        where: {
+          voucherNarration: {
+            [Op.like]: `%${invoiceNo}%`
+          }
+        }
+      });
+      console.log("Vouchers",vouchers)
+
+    }catch(e){
+      console.log("Voucher finder",e)
+    }
+    let Invoice_Transaction = {} 
+    console.log(invoiceNo)
+    // console.log(vouchers)
+    vouchers.forEach((x)=>{
+      // console.log(x)
+      if(x.voucherNarration.includes(invoiceNo)){
+        console.log(x.id, result.dataValues.id)
+        Invoice_Transaction = {
+          InvoiceId: result.dataValues.id,
+          VoucherId: x.id
+        }
+      }
+    })  
+    console.log(Invoice_Transaction)
+    let resultThree
+    try{
+      resultThree = await Invoice_Transactions.create({
+        gainLoss: result.dataValues.payType=="Receivable"?(result.dataValues.total - result.dataValues.recieved):(result.dataValues.total - result.dataValues.paid),
+        amount: result.dataValues.total,
+        createdAt: result.dataValues.createdAt,
+        ...Invoice_Transaction
+      })
+      
+    }catch(e){
+      console.log("Invoice Transactions Creation",e)
+    }
+    console.log(resultThree)
+    res.json({ status: "success", result: result });
+  } catch (error) {
+    res.json({ status: "error", result: error });
+  }
+})
+
 // For Data Backup
 routes.post("/createBulkInvoices", async (req, res) => {
   try {
