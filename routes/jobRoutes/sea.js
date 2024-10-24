@@ -28,7 +28,7 @@ const getJob = (id) => {
 routes.get("/getValues", async(req, res) => {
   console.log("============Request Made=====================")
   let makeResult = (result, resultTwo) => {
-    let finalResult = {shipper:[], consignee:[], notify:[], client:[]};
+    let finalResult = {shipper:[], consignee:[], notify:[], client:[], sLine:[]};
     result.forEach((x) => {
       if(x.types.includes('Shipper')){
         finalResult.shipper.push({name:`${x.name} (${x.code})`, id:x.id, types:x.types})
@@ -38,6 +38,10 @@ routes.get("/getValues", async(req, res) => {
       }
       if(x.types.includes('Notify')){
         finalResult.notify.push({name:`${x.name} (${x.code})`, id:x.id, types:x.types})
+      }
+      if(x.types.includes('Shipping Line')){
+        console.log(x)
+        finalResult.sLine.push({name:`${x.name} (${x.code})`, id:x.id, types:x.types})
       }
     })
     let tempClient = [];
@@ -95,6 +99,7 @@ routes.get("/getValues", async(req, res) => {
           [Op.or]:[
             { [Op.substring]: 'Shipper' },
             { [Op.substring]: 'Consignee' },
+            { [Op.substring]: 'Shipping Line' },
             { [Op.substring]: 'Notify' }]
         },
         active:true
@@ -145,9 +150,12 @@ routes.get("/getValues", async(req, res) => {
     await charges.forEach((x) => {
       tempChargeList.push({...x.dataValues, label:`(${x.dataValues.code}) ${x.dataValues.short}`, value:x.dataValues.code});
     });
+    // console.log(result.dataValues)
+    let temp = result.filter(x => x.types.includes('Shipping Line'));
     res.json({
       status:'success',
       result:{
+        res: temp,
         party:makeResult(result, resultOne),
         vendor:makeResultTwo(resultThree),
         commodity:tempCommodity,
@@ -728,10 +736,17 @@ routes.get("/getJobByValues", async (req, res) => {
 routes.get("/getValuesJobList", async (req, res) => {
 
   let makeResult = (result, resultTwo) => {
-    let finalResult = { consignee: [], client: [] };
+    let finalResult = { consignee: [], client: [], sLine: [] };
     result.forEach((x) => {
       if (x.types.includes("Consignee")) {
         finalResult.consignee.push({
+          name: `${x.name} (${x.code})`,
+          id: x.id,
+          types: x.types,
+        });
+      }
+      if (x.types.includes("Shipping Line")) {
+        finalResult.sLine.push({
           name: `${x.name} (${x.code})`,
           id: x.id,
           types: x.types,
@@ -793,7 +808,8 @@ routes.get("/getValuesJobList", async (req, res) => {
     const result = await Clients.findAll({
       where: {
         types: {
-          [Op.or]: [{ [Op.substring]: "Consignee" }],
+          [Op.or]: [{ [Op.substring]: "Consignee" },
+          { [Op.substring]: "Shipping Line" }],
         },
       },
       attributes: ["id", "name", "types", "code"],
