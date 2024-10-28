@@ -737,10 +737,17 @@ routes.get("/getJobByValues", async (req, res) => {
 routes.get("/getValuesJobList", async (req, res) => {
 
   let makeResult = (result, resultTwo) => {
-    let finalResult = { consignee: [], client: [] };
+    let finalResult = { consignee: [], client: [], sLine: [] };
     result.forEach((x) => {
       if (x.types.includes("Consignee")) {
         finalResult.consignee.push({
+          name: `${x.name} (${x.code})`,
+          id: x.id,
+          types: x.types,
+        });
+      }
+      if (x.types.includes("Shipping Line")) {
+        finalResult.sLine.push({
           name: `${x.name} (${x.code})`,
           id: x.id,
           types: x.types,
@@ -802,7 +809,8 @@ routes.get("/getValuesJobList", async (req, res) => {
     const result = await Clients.findAll({
       where: {
         types: {
-          [Op.or]: [{ [Op.substring]: "Consignee" }],
+          [Op.or]: [{ [Op.substring]: "Consignee" },
+          { [Op.substring]: "Shipping Line" }],
         },
       },
       attributes: ["id", "name", "types", "code"],
