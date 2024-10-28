@@ -809,7 +809,7 @@ routes.get("/getLedger", async(req, res) => {
       attributes:['amount', 'type', 'narration', 'createdAt', 'defaultAmount'],
       include:[{
         model:Vouchers,
-        required: false,
+        // required: false,
         attributes:['voucher_Id', 'id', 'type', 'currency', 'exRate', 'vType'],
         where:{
           // currency:req.headers.currency?req.headers.currency:null,

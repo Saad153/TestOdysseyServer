@@ -28,7 +28,7 @@ const getJob = (id) => {
 routes.get("/getValues", async(req, res) => {
   console.log("============Request Made=====================")
   let makeResult = (result, resultTwo) => {
-    let finalResult = {shipper:[], consignee:[], notify:[], client:[]};
+    let finalResult = {shipper:[], consignee:[], notify:[], client:[], sLine:[]};
     result.forEach((x) => {
       if(x.types.includes('Shipper')){
         finalResult.shipper.push({name:`${x.name} (${x.code})`, id:x.id, types:x.types})
@@ -38,6 +38,10 @@ routes.get("/getValues", async(req, res) => {
       }
       if(x.types.includes('Notify')){
         finalResult.notify.push({name:`${x.name} (${x.code})`, id:x.id, types:x.types})
+      }
+      if(x.types.includes('Shipping Line')){
+        console.log(x)
+        finalResult.sLine.push({name:`${x.name} (${x.code})`, id:x.id, types:x.types})
       }
     })
     let tempClient = [];
@@ -95,6 +99,7 @@ routes.get("/getValues", async(req, res) => {
           [Op.or]:[
             { [Op.substring]: 'Shipper' },
             { [Op.substring]: 'Consignee' },
+            { [Op.substring]: 'Shipping Line' },
             { [Op.substring]: 'Notify' }]
         },
         active:true
@@ -145,9 +150,12 @@ routes.get("/getValues", async(req, res) => {
     await charges.forEach((x) => {
       tempChargeList.push({...x.dataValues, label:`(${x.dataValues.code}) ${x.dataValues.short}`, value:x.dataValues.code});
     });
+    // console.log(result.dataValues)
+    let temp = result.filter(x => x.types.includes('Shipping Line'));
     res.json({
       status:'success',
       result:{
+        res: temp,
         party:makeResult(result, resultOne),
         vendor:makeResultTwo(resultThree),
         commodity:tempCommodity,
@@ -236,7 +244,7 @@ routes.post("/create", async(req, res) => {
     }
     const check = await SE_Job.findOne({
       order:[['jobId','DESC']], attributes:["jobId"],
-      where:{operation:data.operation, companyId:data.companyId}
+      where:{operation:data.operation, companyId:data.companyId.toString()}
     });
     let currentYear = moment().format("YY");
     if (moment().month() >= 6) {
@@ -251,6 +259,7 @@ routes.post("/create", async(req, res) => {
     res.json({status:'success', result:await getJob(result.id)});
   }
   catch (error) {
+    console.log(error)
     res.json({status:'error', result:error});
   }
 });
