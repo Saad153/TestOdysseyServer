@@ -788,7 +788,7 @@ routes.get("/getByDate", async(req, res) => {
 routes.get("/getLedger", async(req, res) => {
   try {
     console.log(req.headers)
-    const currencyCondition = req.headers.currency!="ALL"?{ currency:req.headers.currency }:null
+    const currencyCondition = req.headers.currency!="PKR"?{ currency:req.headers.currency }:null
 
     const childAccountCondition = req.headers.id!='undefined'
       ? { ChildAccountId: req.headers.id }
