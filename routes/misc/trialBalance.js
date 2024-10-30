@@ -32,7 +32,7 @@ routes.get(`/${url}/get`, async(req, res) => {
         attributes:['id', 'title'],
         include:[{
           model:Voucher_Heads,
-          attributes:['amount', 'defaultAmount', 'type', 'accountType', 'settlement', 'createdAt'],
+          attributes:['amount', 'defaultAmount', 'type', 'accountType', 'settlement', 'createdAt', 'narration'],
           where:{
             // narration: {
             //   [Op.ne]: "Opening Balance"
