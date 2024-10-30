@@ -301,6 +301,7 @@ routes.get("/testResetSomeInvoices", async(req, res) => {
 });
 
 routes.get("/getAllInoivcesByPartyId", async(req, res) => {
+  console.log(req.headers.voucherid + " <<<<=================")
   try {
     let obj = {
       approved:"1",
@@ -315,8 +316,7 @@ routes.get("/getAllInoivcesByPartyId", async(req, res) => {
     }
     let transactionObj = [
       { 
-        model:SE_Job, 
-        required: false, 
+        model:SE_Job,  
         attributes:['id', 'jobNo', 'subType'],
         include:[
           {
@@ -336,22 +336,23 @@ routes.get("/getAllInoivcesByPartyId", async(req, res) => {
     ];
     if(req.headers.edit=='true'){
       obj.id = req.headers.invoices.split(", ")
-      req.headers.voucherid?transactionObj = [
+      transactionObj = [
         ...transactionObj,
         { model:Invoice_Transactions, where:{VoucherId:req.headers.voucherid} }
-      ]:null
+      ]
     } else {
-      // obj.status = { [Op.ne]: '2' }
+      obj.status = { [Op.ne]: '2' }
     }
     const result = await Invoice.findAll({
       where:obj,
       attributes:['id','invoice_No', 'invoice_Id', 'payType', 'recieved', 'paid', 'status', 'total', 'currency', 'roundOff', 'party_Id', 'operation', 'ex_rate'],
       order:[['invoice_Id', 'ASC']],
       include:transactionObj
-    })
+    });
     let partyAccount = null;
     if(result.length>0){
       if(req.headers.party=="vendor"){
+        console.log("================Vendor HERE===================")
         partyAccount = await Vendor_Associations.findAll({
           where:{
             VendorId:result[0].party_Id,
@@ -363,13 +364,14 @@ routes.get("/getAllInoivcesByPartyId", async(req, res) => {
               include:[
                 {
                   model:Parent_Account,
-                  where:{ title:req.headers.pay=="Receivable"?"ACCOUNT RECEIVABLE":"ACCOUNT PAYABLE" }
+                  //where:{ title:req.headers.pay=="Recievable"?"ACCOUNT RECEIVABLE":"ACCOUNT PAYABLE" }
                 }
               ]
             }
           ]
         })
       } else if(req.headers.party=="agent"){
+        console.log("================Agent HERE===================")
         partyAccount = await Vendor_Associations.findAll({
           where:{
             VendorId:result[0].party_Id,
@@ -388,6 +390,7 @@ routes.get("/getAllInoivcesByPartyId", async(req, res) => {
           ]
         })
       } else {
+        console.log("================Client HERE===================")
         partyAccount = await Client_Associations.findAll({
           where:{ 
             ClientId:result[0].party_Id, 
@@ -407,6 +410,7 @@ routes.get("/getAllInoivcesByPartyId", async(req, res) => {
         });
       }
     }
+
     res.json({ status:'success', result:result, account:partyAccount });
   } catch (error) {
 
