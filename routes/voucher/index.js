@@ -348,12 +348,12 @@ routes.get("/getAllJobPayRecVouchers", async (req, res) => {
     const result = await Vouchers.findAll({
       order: [["createdAt", "DESC"]],
       where: {
-        CompanyId:req.headers.companyid,
-        [Op.or]: [
-          { type: "Opening Invoice" },
-          { type: "Opening Bill" },
-        ],
-      },
+        CompanyId: req.headers.companyid,
+        vType: {
+            [Op.notIn]: ["OP", "SI", "PI", ]
+        }
+    },
+    
       include: [{
         model: Voucher_Heads,
         attributes: ['type', 'amount'],
@@ -403,6 +403,7 @@ routes.get("/getVoucherByIdAdvanced", async (req, res) => {
         }]
       }],
     });
+    console.log(result)
     await res.json({ status: "success", result: result });
   } catch (error) {
     res.json({ status: "error", result: error });
