@@ -672,6 +672,67 @@ const createInvoices = (lastJB, init, type, companyId, operation, x) => {
   return result;
 };
 
+routes.get("/getAllInvoiceData", async(req, res) => {
+  try{
+    console.log("Invoice ID>>", req.headers.id)
+    console.log("Invoice Party ID>>", req.headers.party_id)
+    console.log("Invoice Party Type>>", req.headers.party_type)
+    const InvTran = await Invoice_Transactions.findAll({
+      where:{InvoiceId:req.headers.id}
+    })
+
+    let vouchers = []
+    for(let x of InvTran){
+      console.log(x.dataValues.VoucherId)
+      const voucher = await Vouchers.findOne({
+        where:{
+          id:x.dataValues.VoucherId
+        }
+      });
+      // console.log("Voucher>>", voucher.dataValues)
+      vouchers.push(voucher.dataValues)
+    }
+    console.log("Vouchers>>>", vouchers)
+
+
+
+    let heads = []
+    for(let x of vouchers){
+      let party
+      if(req.headers.party_type != "vendor"){
+        party = await Client_Associations.findOne({
+          where:{ClientId:req.headers.party_id}
+        })
+      }else{
+        party = await Vendor_Associations.findOne({
+          where:{VendorId:req.headers.party_id}
+        })
+      }
+      console.log("Party>>>", party)
+      const head = await Voucher_Heads.findAll({
+        where: {
+          VoucherId: x.id,
+          ChildAccountId: party?.dataValues?.ChildAccountId,
+          narration: {
+            [Op.notLike]: '%Ex-Rate%'
+          }
+        }
+      });
+      head.forEach((y)=>{
+        heads.push(y.dataValues)
+      })
+      // heads = head
+    }
+    console.log("Party Name>>>", req.headers.party_id)
+    console.log("Heads>>>", heads)
+
+    res.json({status:'success', result:{InvTran, vouchers, heads}});
+  }catch(error){
+    console.log(error)
+    res.json({status:'error', result:error});
+  }
+})
+
 // generate new invoice with invoice number (This API generates only invoice numbers)
 routes.post("/makeInvoiceNew", async(req, res) => {
   try {
