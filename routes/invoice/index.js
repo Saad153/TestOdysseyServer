@@ -301,7 +301,7 @@ routes.get("/testResetSomeInvoices", async(req, res) => {
 });
 
 routes.get("/getAllInoivcesByPartyId", async(req, res) => {
-  console.log(req.headers.voucherid + " <<<<=================")
+  // console.log(req.headers)
   try {
     let obj = {
       approved:"1",
@@ -334,12 +334,12 @@ routes.get("/getAllInoivcesByPartyId", async(req, res) => {
       },
       //{ model:Charge_Head, attributes:['net_amount', 'local_amount', 'currency', 'ex_rate'] }
     ];
+    // transactionObj = [
+    //   ...transactionObj,
+    //   { model:Invoice_Transactions, where:{VoucherId:req.headers.voucherid} }
+    // ]
     if(req.headers.edit=='true'){
       obj.id = req.headers.invoices.split(", ")
-      transactionObj = [
-        ...transactionObj,
-        { model:Invoice_Transactions, where:{VoucherId:req.headers.voucherid} }
-      ]
     } else {
       obj.status = { [Op.ne]: '2' }
     }
@@ -347,8 +347,29 @@ routes.get("/getAllInoivcesByPartyId", async(req, res) => {
       where:obj,
       attributes:['id','invoice_No', 'invoice_Id', 'payType', 'recieved', 'paid', 'status', 'total', 'currency', 'roundOff', 'party_Id', 'operation', 'ex_rate'],
       order:[['invoice_Id', 'ASC']],
-      include:transactionObj
+      include: [
+        {
+          model: Invoice_Transactions, // Add any desired attributes for Invoice_Transactions
+        },
+        {
+          model: SE_Job,
+          attributes: ['id', 'jobNo', 'subType'],
+          include: [
+            {
+              model: Bl,
+              attributes: ['hbl', 'mbl'],
+              include: [
+                {
+                  model: Container_Info,
+                  attributes: ['no']
+                }
+              ]
+            }
+          ]
+        }
+      ],
     });
+    // console.log(">>>",result[0].dataValues)
     let partyAccount = null;
     if(result.length>0){
       if(req.headers.party=="vendor"){
@@ -495,7 +516,7 @@ routes.get("/getAllOldInoivcesByPartyId", async(req, res) => {
         });
       }
     }
-    console.log(">>>",result)
+    // console.log(">>>",result)
       res.json({ status:'success', result:result, account:partyAccount });
     }
     catch (error) {
@@ -549,8 +570,59 @@ routes.get("/getTransaction", async(req, res) => {
   }
 });
 
+routes.get("/getAllInvoices", async(req, res) => {
+  try{
+    console.log(req.headers)
+    console.log(req.headers.id)
+    const account = req.headers.type == "client" ? Client_Associations : Vendor_Associations;
+    // const obj = req.headers.type == "Client" ? { ClientId: parseInt(req.headers.id) } : { VendorId: parseInt(req.headers.id) };
+    const acc = await account.findOne({
+      where: {
+        CompanyId: req.headers.companyid,
+        ChildAccountId: parseInt(req.headers.id),
+      },
+    });
+    console.log("acc>>",acc.dataValues)
+    const ClientId = acc.dataValues.ClientId.toString() || acc.dataValues.VendorId.toString()
+    const result = await Invoice.findAll({
+      where: {
+        party_Id: ClientId,
+        id: { [Op.ne]: req.headers.invoiceid }
+      },
+      include: [
+        {
+          model: Invoice_Transactions, // Add any desired attributes for Invoice_Transactions
+        },
+        {
+          model: SE_Job,
+          attributes: ['id', 'jobNo', 'subType'],
+          include: [
+            {
+              model: Bl,
+              attributes: ['hbl', 'mbl'],
+              include: [
+                {
+                  model: Container_Info,
+                  attributes: ['no']
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    });
+    
+    console.log(result)
+    res.json({status: 'success', result: result});
+  }catch(error){
+    console.log(error)
+    res.json({status: 'error', result: error});
+  }
+})
+
 routes.post("/createInvoiceTransaction", async(req, res) => {
   try {
+    console.log(req.body)
     req.body.invoices.forEach(async(x) => {
       Invoice.update(x, {where:{id:x.id}});
     })
@@ -692,7 +764,7 @@ routes.get("/getAllInvoiceData", async(req, res) => {
       // console.log("Voucher>>", voucher.dataValues)
       vouchers.push(voucher.dataValues)
     }
-    console.log("Vouchers>>>", vouchers)
+    // console.log("Vouchers>>>", vouchers)
 
 
 
@@ -708,7 +780,7 @@ routes.get("/getAllInvoiceData", async(req, res) => {
           where:{VendorId:req.headers.party_id}
         })
       }
-      console.log("Party>>>", party)
+      // console.log("Party>>>", party)
       const head = await Voucher_Heads.findAll({
         where: {
           VoucherId: x.id,
@@ -723,8 +795,8 @@ routes.get("/getAllInvoiceData", async(req, res) => {
       })
       // heads = head
     }
-    console.log("Party Name>>>", req.headers.party_id)
-    console.log("Heads>>>", heads)
+    // console.log("Party Name>>>", req.headers.party_id)
+    // console.log("Heads>>>", heads)
 
     res.json({status:'success', result:{InvTran, vouchers, heads}});
   }catch(error){
