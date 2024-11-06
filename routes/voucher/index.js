@@ -200,10 +200,12 @@ routes.post("/cheaqueReturned", async (req, res) => {
 
 routes.post("/voucherEdit", async (req, res) => {
   try {
+    console.log("Body>>", req.body.Voucher_Heads)
     await Vouchers.update({ ...req.body }, { where: { id: req.body.id } })
     await Voucher_Heads.destroy({ where: { VoucherId: req.body.id } })
     req.body.Voucher_Heads.forEach(async (x) => {
-      await Voucher_Heads.upsert({ ...x, VoucherId: req.body.id, createdAt: req.body.createdAt });
+      const result = await Voucher_Heads.upsert({ ...x, VoucherId: req.body.id, createdAt: req.body.createdAt });
+      console.log("Result>>", result)
     });
     await res.json({ status: "success" });
   } catch (error) {

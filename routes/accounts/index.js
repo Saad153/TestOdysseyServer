@@ -792,7 +792,7 @@ routes.get("/getLedger", async(req, res) => {
 
     const childAccountCondition = req.headers.id!='undefined'
       ? { ChildAccountId: req.headers.id }
-      : { ChildAccountId: { [Op.ne]: null } };  // If old is false (exclude "Old Invoice")
+      : { ChildAccountId: { [Op.ne]: null } };
     console.log(childAccountCondition)
     console.log(currencyCondition)
     console.log(req.headers.company)
@@ -809,10 +809,8 @@ routes.get("/getLedger", async(req, res) => {
       attributes:['amount', 'type', 'narration', 'createdAt', 'defaultAmount'],
       include:[{
         model:Vouchers,
-        // required: false,
         attributes:['voucher_Id', 'id', 'type', 'currency', 'exRate', 'vType'],
         where:{
-          // currency:req.headers.currency?req.headers.currency:null,
           ...currencyCondition,
           CompanyId: req.headers.company,
         }
@@ -842,9 +840,6 @@ routes.get("/getLedgerClosingBalance", async(req, res) => {
       include:[{
         model:Vouchers,
         attributes:['voucher_Id', 'id', 'type', 'currency', 'exRate', 'vType'],
-        where:{
-          currency:req.headers.currency
-        }
       }],
     })
     res.json({status:'success', result:result});

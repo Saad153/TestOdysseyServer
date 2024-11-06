@@ -572,8 +572,6 @@ routes.get("/getTransaction", async(req, res) => {
 
 routes.get("/getAllInvoices", async(req, res) => {
   try{
-    console.log(req.headers)
-    console.log(req.headers.id)
     const account = req.headers.type == "client" ? Client_Associations : Vendor_Associations;
     // const obj = req.headers.type == "Client" ? { ClientId: parseInt(req.headers.id) } : { VendorId: parseInt(req.headers.id) };
     const acc = await account.findOne({
@@ -582,8 +580,7 @@ routes.get("/getAllInvoices", async(req, res) => {
         ChildAccountId: parseInt(req.headers.id),
       },
     });
-    console.log("acc>>",acc.dataValues)
-    const ClientId = acc.dataValues.ClientId.toString() || acc.dataValues.VendorId.toString()
+    const ClientId = req.headers.type == "client" ?acc.dataValues.ClientId.toString() : acc.dataValues.VendorId.toString()
     const result = await Invoice.findAll({
       where: {
         party_Id: ClientId,
@@ -611,8 +608,6 @@ routes.get("/getAllInvoices", async(req, res) => {
         }
       ]
     });
-    
-    console.log(result)
     res.json({status: 'success', result: result});
   }catch(error){
     console.log(error)
