@@ -51,7 +51,6 @@ async function getAccount(id){
 
 routes.post("/createParentAccount", async(req, res) => {
   try {
-    // console.log(req.body)
     const result = await Parent_Account.findOne({
       where: {
         [Op.and]: [
@@ -62,12 +61,9 @@ routes.post("/createParentAccount", async(req, res) => {
       }
     })
     if(result){
-      console.log("result found")
-      // console.log(result)
       res.json({status:'exists', result:result});
     }else{
       const code = req.body.CompanyId.toString()+req.body.AccountId.toString();
-      // console.log(code)
       const result1 = await Parent_Account.findOne({
         where: {
           code: {
@@ -79,10 +75,7 @@ routes.post("/createParentAccount", async(req, res) => {
       
       let newCode = 0
       if(result1){
-        console.log("Printing found values")
-        // console.log(result1)
         newCode = parseInt(result1.dataValues.code)+1
-        // console.log(newCode)
       }else{
         newCode = parseInt(code)*100
         newCode++
@@ -90,10 +83,7 @@ routes.post("/createParentAccount", async(req, res) => {
       let values = req.body
       values.editable=0
       values.code=newCode.toString()
-      // console.log("Printing values")
-      // console.log(values)
       const result2 = await Parent_Account.create(values);
-      // console.log(result2)
       let val;
       val = await Parent_Account.findOne({
         where: {
@@ -111,7 +101,6 @@ routes.post("/createParentAccount", async(req, res) => {
 
 routes.post("/createChildAccount", async(req, res) => {
   try {
-    console.log(req.body)
     const result = await Child_Account.findOne({
       where: {
         [Op.and]: [
@@ -150,22 +139,18 @@ routes.post("/createChildAccount", async(req, res) => {
       values.editable=0
       values.code=newCode.toString()
       values.ParentAccountId = req.body.ParentAccountId
-      console.log(values)
       const result3 = await Child_Account.create(values);
-      // console.log(result3.dataValues)
       let val;
-      // val = await getAllAccounts(req.body.CompanyId);
       val = await Child_Account.findOne({
         where:{
           code: newCode.toString()
         }
       })
-      // console.log(val)
       res.json({status:'success', result:val});
     }
   }
   catch (error) {
-    console.log(error)
+    console.error(error)
     res.json({status:'error', result:error});
   }
 });
@@ -178,7 +163,6 @@ routes.post("/editParentAccount", async(req, res) => {
     if(result){
       res.json({status:'exists', result:result});
     }else{
-      console.log(req.body)
       await Parent_Account.update({title:title},{where:{id:id}})
       let val;
       val = await getAllAccounts(CompanyId);
@@ -215,10 +199,8 @@ routes.post("/codeParentAccount", async(req, res) => {
   try {
     result = false
     if(result){
-      console.log("Got result"+code)
       res.json({status:'exists', result:result});
     }else{
-      console.log("Updating")
       await Parent_Account.update({title:title, code:code},{where:{id:id}})
       let val;
       val = await getAllAccounts(CompanyId);
@@ -226,7 +208,6 @@ routes.post("/codeParentAccount", async(req, res) => {
     }
   }
   catch (error) {
-    console.log("Error")
     res.send({status:'error', result:error});
   }
 });
@@ -275,7 +256,6 @@ routes.get("/getAccount", async(req, res) => {
 routes.get("/getAccountsForTransaction", async(req, res) => {
     let obj = { };
     let ChildObj = { };
-    console.log(req.headers.companyid)
     if(req.headers.type=="Bank") {
         ChildObj = {subCategory:'Bank'}
         obj.CompanyId = req.headers.companyid
@@ -342,7 +322,6 @@ routes.get("/getAccountsForTransaction", async(req, res) => {
 routes.get("/getAccountsForTransactionVouchers", async(req, res) => {
   let obj = { };
   let ChildObj = { };
-  // console.log(req.headers.type, '====')
   if(req.headers.type=="Bank") {
       ChildObj = {subCategory:'Bank'}
     } else if(req.headers.type=="Cash"){
@@ -351,14 +330,6 @@ routes.get("/getAccountsForTransactionVouchers", async(req, res) => {
     ChildObj = {subCategory:'Cash'}
   } else if(req.headers.type=='Adjust') {
       ChildObj = {subCategory:'General'}
-      //   obj = {
-      //     [Op.and]: [
-      //       { title: { [Op.ne]: "Cash" } },
-      //       { title: { [Op.ne]: "Accounts Recievable" } },
-      //       { title: { [Op.ne]: "Accounts Payble" } },
-      //       { title: { [Op.ne]: "Bank" } }
-      //     ]
-      //   }
   } else if(req.headers.type=='All') {
 
   } else if(req.headers.type=='officevouchers') { 
@@ -391,7 +362,6 @@ routes.get("/getAccountsForTransactionVouchers", async(req, res) => {
       CompanyId:req.headers.companyid
     }
   }
-  // console.log(req.headers)
   try {
     const result = await Child_Account.findAll({
       where:ChildObj,
@@ -451,7 +421,6 @@ routes.get("/getAllParentswithChildsbyAccountId", async(req, res) => {
         attributes:["title", "id", "code"],
       }]
     })
-    // console.log(result)
     res.json({status: 'success', result: result})
   }
   catch (error) {
@@ -703,7 +672,6 @@ routes.get("/balanceSheet", async(req, res) => {
 
 routes.get("/voucherLedger", async(req, res) => {
   try {
-    console.log(req.headers)
     const currencyCondition = req.headers.currency!="ALL"?{ currency:req.headers.currency }:null
     const childAccountCondition = req.headers.id
       ? { ChildAccountId: req.headers.id }
@@ -723,33 +691,14 @@ routes.get("/voucherLedger", async(req, res) => {
         required: false,
         where:{
           CompanyId: req.headers.companyid, 
-          // currency:req.headers.currency!=""?req.headers.currency:null
           ...currencyCondition
         },
       }
     })
-    console.log("Result Done")
-    console.log(result)
-
-    // const result = await Child_Account.findAll({
-    //   where:{ParentAccountId:req.headers.id},
-    //   attributes:['title'],
-    //   include:[
-    //     { 
-    //       model:Voucher_Heads,
-    //       attributes:['amount', 'createdAt'],
-    //       include:[{
-    //         model:Vouchers,
-    //         attributes:['voucher_Id', 'vType'],
-    //       }]
-    //     }
-    //   ]
-    // })
     res.json({status:'success', result:result});
   }
   catch (error) {
-    console.log("Error")
-    console.log(error)
+    console.error(error)
     res.json({status:'error', result:error});
   }
 });   
@@ -777,7 +726,6 @@ routes.get("/getByDate", async(req, res) => {
         }
       ]
     }) 
-    console.log("Result",result)
     res.json({status:'success', result:result});
   }
   catch (error) {
@@ -787,22 +735,18 @@ routes.get("/getByDate", async(req, res) => {
 
 routes.get("/getLedger", async(req, res) => {
   try {
-    console.log(req.headers)
     const currencyCondition = req.headers.currency!="PKR"?{ currency:req.headers.currency }:null
 
     const childAccountCondition = req.headers.id!='undefined'
       ? { ChildAccountId: req.headers.id }
       : { ChildAccountId: { [Op.ne]: null } };
-    console.log(childAccountCondition)
-    console.log(currencyCondition)
-    console.log(req.headers.company)
-    console.log(moment(req.headers.to).add(1, 'days').toDate())
     const result = await Voucher_Heads.findAll({
       raw:true,
       where:{
         ...childAccountCondition,
         createdAt:{
           [Op.lte]: moment(req.headers.to).add(1, 'days').toDate(),
+          [Op.gte]: moment(req.headers.from).toDate(),
         },
 
       },
@@ -821,7 +765,6 @@ routes.get("/getLedger", async(req, res) => {
       }],
       order:[["createdAt","ASC"]],
     })
-    console.log(result)
     res.json({status:'success', result:result});
   } catch (error) {
     console.log(error)

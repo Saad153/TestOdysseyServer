@@ -166,7 +166,6 @@ routes.get("/getJobInvoices", async(req, res) => {
 
 routes.get("/getFilteredInvoices", async(req, res) => {
   try {
-    console.log(req.headers.type)
     const result = await Invoice.findAll({
       where:{type:req.headers.type},
       attributes:['id', 'invoice_No', 'status', 'operation', 'currency', 'ex_rate', 'party_Name', 'total', 'partyType', 'approved'],
@@ -179,7 +178,6 @@ routes.get("/getFilteredInvoices", async(req, res) => {
         where:{charge:{ [Op.ne]: null }}
       }]
     })
-    console.log(result)
     res.json({status:'success', result:result});
   } catch (error) {
     res.json({status:'error', result:error});
@@ -226,7 +224,7 @@ routes.get("/getInvoiceByNo", async(req, res) => {
         order: [
           [{ model: Charge_Head }, 'id', 'ASC'],
         ]
-      }).catch((x)=>console.log(x))
+      })
       res.json({status:'success', result:{ resultOne }});
     }
     catch (error) {
@@ -271,7 +269,7 @@ routes.get("/getInvoiceById", async(req, res) => {
         order: [
           [{ model: Charge_Head }, 'id', 'ASC'],
         ]
-      }).catch((x)=>console.log(x))
+      })
       res.json({status:'success', result:{ resultOne }});
     }
     catch (error) {
@@ -301,13 +299,11 @@ routes.get("/testResetSomeInvoices", async(req, res) => {
 });
 
 routes.get("/getAllInoivcesByPartyId", async(req, res) => {
-  // console.log(req.headers)
   try {
     let obj = {
       approved:"1",
       party_Id:req.headers.id,
       companyId:req.headers.companyid
-      //...chardHeadLogic(req.headers.invoicecurrency)
     }
     if(req.headers.party=="agent"){
       obj.currency = req.headers.invoicecurrency
@@ -369,11 +365,9 @@ routes.get("/getAllInoivcesByPartyId", async(req, res) => {
         }
       ],
     });
-    // console.log(">>>",result[0].dataValues)
     let partyAccount = null;
     if(result.length>0){
       if(req.headers.party=="vendor"){
-        console.log("================Vendor HERE===================")
         partyAccount = await Vendor_Associations.findAll({
           where:{
             VendorId:result[0].party_Id,
@@ -392,7 +386,6 @@ routes.get("/getAllInoivcesByPartyId", async(req, res) => {
           ]
         })
       } else if(req.headers.party=="agent"){
-        console.log("================Agent HERE===================")
         partyAccount = await Vendor_Associations.findAll({
           where:{
             VendorId:result[0].party_Id,
@@ -411,7 +404,6 @@ routes.get("/getAllInoivcesByPartyId", async(req, res) => {
           ]
         })
       } else {
-        console.log("================Client HERE===================")
         partyAccount = await Client_Associations.findAll({
           where:{ 
             ClientId:result[0].party_Id, 
@@ -441,7 +433,6 @@ routes.get("/getAllInoivcesByPartyId", async(req, res) => {
 
 routes.get("/getAllOldInoivcesByPartyId", async(req, res) => {
   try {
-    console.log("Old Invoices",req.headers)
     const result = await Invoice.findAll({
       where:{
         approved:"1",
@@ -466,7 +457,6 @@ routes.get("/getAllOldInoivcesByPartyId", async(req, res) => {
     let partyAccount = null;
     if(result.length>0){
       if(req.headers.party=="vendor"){
-        console.log("Inside Vendor Association")
         partyAccount = await Vendor_Associations.findAll({
           where:{
             VendorId:result[0].party_Id,
@@ -516,7 +506,6 @@ routes.get("/getAllOldInoivcesByPartyId", async(req, res) => {
         });
       }
     }
-    // console.log(">>>",result)
       res.json({ status:'success', result:result, account:partyAccount });
     }
     catch (error) {
@@ -526,9 +515,7 @@ routes.get("/getAllOldInoivcesByPartyId", async(req, res) => {
 
 routes.get("/deleteInvoice", async(req, res) => {
   try{
-    console.log(req.headers.id)
     const invoice = await Invoice.findOne({where:{id:req.headers.id}})
-    console.log(invoice.dataValues)
     await Charge_Head.update(
       { invoice_id: null, status: 0 },
       { where: { invoice_id: invoice.dataValues.invoice_No } }
@@ -634,7 +621,6 @@ routes.get("/getAllInvoices", async(req, res) => {
 
 routes.post("/createInvoiceTransaction", async(req, res) => {
   try {
-    console.log(req.body)
     req.body.invoices.forEach(async(x) => {
       Invoice.update(x, {where:{id:x.id}});
     })
@@ -758,25 +744,19 @@ const createInvoices = (lastJB, init, type, companyId, operation, x) => {
 
 routes.get("/getAllInvoiceData", async(req, res) => {
   try{
-    console.log("Invoice ID>>", req.headers.id)
-    console.log("Invoice Party ID>>", req.headers.party_id)
-    console.log("Invoice Party Type>>", req.headers.party_type)
     const InvTran = await Invoice_Transactions.findAll({
       where:{InvoiceId:req.headers.id}
     })
 
     let vouchers = []
     for(let x of InvTran){
-      console.log(x.dataValues.VoucherId)
       const voucher = await Vouchers.findOne({
         where:{
           id:x.dataValues.VoucherId
         }
       });
-      // console.log("Voucher>>", voucher.dataValues)
       vouchers.push(voucher.dataValues)
     }
-    // console.log("Vouchers>>>", vouchers)
 
 
 
@@ -792,7 +772,6 @@ routes.get("/getAllInvoiceData", async(req, res) => {
           where:{VendorId:req.headers.party_id}
         })
       }
-      // console.log("Party>>>", party)
       const head = await Voucher_Heads.findAll({
         where: {
           VoucherId: x.id,
@@ -805,10 +784,7 @@ routes.get("/getAllInvoiceData", async(req, res) => {
       head.forEach((y)=>{
         heads.push(y.dataValues)
       })
-      // heads = head
     }
-    // console.log("Party Name>>>", req.headers.party_id)
-    // console.log("Heads>>>", heads)
 
     res.json({status:'success', result:{InvTran, vouchers, heads}});
   }catch(error){
@@ -852,20 +828,22 @@ routes.post("/makeInvoiceNew", async(req, res) => {
         charges.push({...x, status:"1", invoice_id:createdInvoice.invoice_No })
       }
     });
-    
     const newInv = await Invoice.create(createdInvoice);
     // const newCharges = await charges.map((x)=>{
     //   return{ ...x, InvoiceId:newInv.id }
     // })
-    await charges.forEach((x) => {
-      Charge_Head.upsert({ ...x, InvoiceId:newInv.id });
-    })
-    await res.json({status: 'success'});
+    let chargesIds = []
+    for(let x of charges){
+      let chargeHeads = await Charge_Head.upsert({ ...x, InvoiceId:newInv.id });
+      chargesIds.push(chargeHeads[0].dataValues.id)
+    }
+    await res.json({status: 'success', result: {chargesIds, newInv}});
   }
   catch (error) {
     res.json({status: 'error', result: error});
   }
 });
+
 
 // To display invoices in Invoices page present in accounts tab
 routes.get("/getInvoices", async(req, res) =>{
@@ -885,6 +863,175 @@ routes.get("/getInvoices", async(req, res) =>{
     res.json({status: 'error', result: error});
   }
 });
+
+routes.post("/approve", async(req, res) => {
+  try{
+    const chargesHeads = await Charge_Head.findAll({
+      where:{InvoiceId:req.body.id}
+    })
+    let total = 0.0;
+    for(let x of chargesHeads){
+      x.partyType=="client"?total += parseFloat(x.dataValues.local_amount):total += parseFloat(x.dataValues.amount)  
+    }
+    const invoice = await Invoice.findOne({where:{id:req.body.id}})
+    await invoice.update({total:total, approved:1})
+    await Charge_Head.update({approved:1, status:1}, {where:{InvoiceId:req.body.id}})
+    const job = await SE_Job.findOne({where:{id:invoice.dataValues.SEJobId}})
+    const expenseAccount = await Child_Account.findOne({where:{title:"FCL FREIGHT EXPENSE"}, include:[{model:Parent_Account, where:{CompanyId:invoice.dataValues.companyId}}]})
+    const incomeAccount = await Child_Account.findOne({where:{title:"FCL FREIGHT INCOME"}, include:[{model:Parent_Account, where:{CompanyId:invoice.dataValues.companyId}}]})
+    let account
+    if(invoice.dataValues.partyType == "vendor"){
+      account = await Vendor_Associations.findOne({where:{VendorId:invoice.dataValues.party_Id}})
+    }else{
+      account = await Client_Associations.findOne({where:{ClientId:invoice.dataValues.party_Id}})
+    }
+
+    vouchers = {
+      type:invoice.dataValues.payType=="Recievable"?"Job Recievable":"Job Payble",
+      vType:invoice.dataValues.payType=="Recievable"?"SI":"PI",
+      CompanyId:invoice.dataValues.companyId,
+      amount:"",
+      currency:invoice.dataValues.type=="Job Bill"?"PKR":invoice.dataValues.type=="Job Invoice"?"PKR":invoice.dataValues.currency,
+      exRate:invoice.dataValues.type=="Job Bill"?"1":invoice.dataValues.type=="Job Invoice"?"1":invoice.dataValues.ex_rate,
+      chequeNo:"",
+      payTo:"",
+      costCenter:"KHI",
+      invoice_Voucher:"1",
+      invoice_Id:invoice.dataValues.id,
+      partyId: invoice.dataValues.party_Id,
+      partyName: invoice.dataValues.party_Name,
+    }
+
+    const check = await Vouchers.findOne({
+      order: [["voucher_No", "DESC"]],
+      attributes: ["voucher_No"],
+      where: { vType: vouchers.vType, CompanyId: invoice.dataValues.companyId }
+    });
+
+    const voucher = await Vouchers.create({
+      ...vouchers,
+      voucher_No: check == null ? 1 : parseInt(check.voucher_No) + 1,
+      voucher_Id: `${invoice.dataValues.companyId == 1 ? "SNS" : invoice.dataValues.companyId == 2 ? "CLS" : "ACS"}
+      -${vouchers.vType}
+      -${check == null ? 1 : parseInt(check.voucher_No) + 1}
+      /${moment().month() >= 6 ? moment().add(1, 'year').format('YY') : moment().format('YY')}`
+    })
+
+    let Voucher_Head = []
+    let narration = `${invoice.dataValues.payType} Against Invoice ${invoice.dataValues.invoice_No} For Job# ${job.dataValues.jobNo} From ${invoice.dataValues.party_Name}`
+
+  if(invoice.dataValues.roundOff=="0"){  
+    Voucher_Head.push({
+      amount:total,
+      type:invoice.dataValues.payType=="Recievable"?"debit":"credit",
+      narration:narration,
+      VoucherId:voucher.dataValues.id,
+      ChildAccountId:account.dataValues.ChildAccountId,
+    })
+    Voucher_Head.push({
+      amount:total,
+      type:invoice.dataValues.payType=="Recievable"?"credit":"debit",
+      narration:narration,
+      VoucherId:voucher.dataValues.id,
+      ChildAccountId:invoice.dataValues.payType=="Recievable"?incomeAccount.dataValues.id:expenseAccount.dataValues.id,
+    })
+  } else if(parseFloat(invoice.dataValues.roundOff)>"0"  && invoice.dataValues.payType=="Recievable"){
+   Voucher_Head.push({
+      amount:amount + parseFloat(invoice.dataValues.roundOff),
+      type:invoice.dataValues.payType=="Recievable"?"debit":"credit",
+      narration:narration,
+      VoucherId:voucher.dataValues.id,
+      ChildAccountId:account.dataValues.ChildAccountId,
+    })
+    Voucher_Head.push({
+      amount:amount + parseFloat(invoice.dataValues.roundOff),
+      type:"credit",
+      narration:narration,
+      VoucherId:voucher.dataValues.id,
+      ChildAccountId:incomeAccount.dataValues.id
+    })
+  } else if(parseFloat(invoice.dataValues.roundOff)<"0"  && invoice.dataValues.payType=="Recievable"){
+    Voucher_Head.push({
+      amount:amount- parseFloat(invoice.dataValues.roundOff)*-1,
+      type:invoice.dataValues.payType=="Recievable"?"debit":"credit",
+      narration:narration,
+      VoucherId:voucher.dataValues.id,
+      ChildAccountId:account.dataValues.id
+    })
+    Voucher_Head.push({
+      amount:amount,
+      type:"credit",
+      narration:narration,
+      VoucherId:voucher.dataValues.id,
+      ChildAccountId:incomeAccount.dataValues.id
+    })
+    Voucher_Head.push({
+      amount:parseFloat(invoice.dataValues.roundOff)*-1,
+      type:invoice.dataValues.payType=="Recievable"?"debit":"credit",
+      narration:narration,
+      VoucherId:voucher.dataValues.id,
+      ChildAccountId:expenseAccount.dataValues.id
+    })
+  } else if(parseFloat(invoice.dataValues.roundOff) >0  && invoice.dataValues.payType!="Recievable"){
+    Voucher_Head.push({
+      amount:amount+ parseFloat(invoice.dataValues.roundOff),
+      type:"credit",
+      narration:narration,
+      VoucherId:voucher.dataValues.id,
+      ChildAccountId:account.dataValues.ChildAccountId
+    })
+    Voucher_Head.push({
+      amount:amount + parseFloat(invoice.dataValues.roundOff),
+      type:"debit",
+      narration:narration,
+      VoucherId:voucher.dataValues.id,
+      ChildAccountId:expenseAccount.dataValues.id
+    })
+  } else if(parseFloat(invoice.dataValues.roundOff) <0  && invoice.dataValues.payType!="Recievable"){
+    Voucher_Head.push({
+      amount:(amount - parseFloat(invoice.dataValues.roundOff)*-1).toFixed(2),
+      type:"credit",
+      narration:narration,
+      VoucherId:voucher.dataValues.id,
+      ChildAccountId:account.dataValues.ChildAccountId
+    })
+    Voucher_Head.push({
+      amount:(amount).toFixed(2),
+      type:"debit",
+      narration:narration,
+      VoucherId:voucher.dataValues.id,
+      ChildAccountId:expenseAccount.dataValues.id
+    })
+    Voucher_Head.push({
+      amount:(parseFloat(invoice.dataValues.roundOff)*-1).toFixed(2),
+      type:"credit",
+      narration:narration,
+      VoucherId:voucher.dataValues.id,
+      ChildAccountId:incomeAccount.dataValues.id
+    })
+  }
+
+  await Voucher_Head.map(async(x)=>{
+     await Voucher_Heads.create(x)
+  })
+    res.json({status: 'success', result: req.body.id});
+  }catch(error){
+    console.log(error)
+    res.json({status: 'error', result: error});
+  }
+  
+})
+
+routes.post("/approveHeads", async(req, res) => {
+  try{
+    const result = await Charge_Head.findOne({where:{id:req.body.id}})
+    await Charge_Head.update({status:result.dataValues.status=="1"?"0":"1"}, {where:{id:result.dataValues.id}})
+    res.json({status: 'success', result: result});
+  }catch(error){
+    console.log(error)
+    res.json({status: 'error', result: error});
+  }
+})
 
 // For Experimental Purposes
 routes.get('/getTaskInvoices', async(req, res) => {
@@ -1102,7 +1249,6 @@ routes.post("/uploadbulkInvoicesTest", async (req, res) => {
     await res.json({ status:"success", result:resultOne?resultOne.id:resultTwo.id });
   } catch (error) {
     console.log(error);
-    console.log(req.body.party_Name);
     res.json({ status: "error", result: error });
   }
 });
@@ -1121,7 +1267,6 @@ const setVoucherHeads = (id, heads) => {
 
 routes.post("/uploadbulkInvoices", async (req, res) => {
   try {
-    // console.log(req.body)
     temp = req.body
     voucher = temp.voucher
     delete temp.voucher
@@ -1135,7 +1280,6 @@ routes.post("/uploadbulkInvoices", async (req, res) => {
     let vouchers
     let invoiceNo = temp.invoice_No.slice(0, -2)
     try{
-      console.log(invoiceNo)
 
       vouchers = await Vouchers.findAll({
         where: {
@@ -1144,25 +1288,19 @@ routes.post("/uploadbulkInvoices", async (req, res) => {
           }
         }
       });
-      console.log("Vouchers",vouchers)
 
     }catch(e){
       console.log("Voucher finder",e)
     }
     let Invoice_Transaction = {} 
-    console.log(invoiceNo)
-    // console.log(vouchers)
     vouchers.forEach((x)=>{
-      // console.log(x)
       if(x.voucherNarration.includes(invoiceNo)){
-        console.log(x.id, result.dataValues.id)
         Invoice_Transaction = {
           InvoiceId: result.dataValues.id,
           VoucherId: x.id
         }
       }
     })  
-    console.log(Invoice_Transaction)
     let resultThree
     try{
       resultThree = await Invoice_Transactions.create({
@@ -1173,9 +1311,8 @@ routes.post("/uploadbulkInvoices", async (req, res) => {
       })
       
     }catch(e){
-      console.log("Invoice Transactions Creation",e)
+      console.log("Invoice Transaction creater",e)
     }
-    console.log(resultThree)
     res.json({ status: "success", result: result });
   } catch (error) {
     res.json({ status: "error", result: error });
@@ -1185,26 +1322,22 @@ routes.post("/uploadbulkInvoices", async (req, res) => {
 // For Data Backup
 routes.post("/createBulkInvoices", async (req, res) => {
   try {
-    // console.log(req.body)
     temp = req.body
     voucher = temp.voucher
     delete temp.voucher
     const result = await Invoice.create(temp)
-    // console.log("Invoice Created")
     const resultC = await Client_Associations.findOne({
       where:{
         ClientId:req.body.party_Id,
         CompanyId: req.body.companyId
       },
     })
-    // resultC?console.log("Client Found"):null
     const resultV = await Vendor_Associations.findOne({
       where:{
         VendorId:req.body.party_Id,
         CompanyId: req.body.companyId
       },
     })
-    // resultV?console.log("Vendor Found"):null
     voucher.Voucher_Heads.forEach((x)=>{
       x.ChildAccountId = resultC?resultC.dataValues.ChildAccountId:resultV.dataValues.ChildAccountId
       x.narration = req.body.invoice_No 
@@ -1224,7 +1357,6 @@ routes.post("/createBulkInvoices", async (req, res) => {
       }-${check == null ? 1 : parseInt(check.voucher_No) + 1
       }/${moment().month() >= 6 ? moment().add(1, 'year').format('YY') : moment().format('YY')}`,
     })
-    // console.log("Voucher Created")
     const resultThree = await Invoice_Transactions.create({
       gainLoss: result.dataValues.payType=="Receivable"?(result.dataValues.total - result.dataValues.recieved):(result.dataValues.total - result.dataValues.paid),
       amount: result.dataValues.total,
@@ -1232,12 +1364,9 @@ routes.post("/createBulkInvoices", async (req, res) => {
       InvoiceId: result.dataValues.id,
       VoucherId: resultTwo.dataValues.id
     })
-    // console.log("Invoice Transaction Created")
 
     let dataz = await setVoucherHeads(resultTwo.id, voucher.Voucher_Heads);
     const datab = await Voucher_Heads.bulkCreate(dataz);
-    // console.log("Voucher Heads Created")
-    // datab.dataValues?console.log(datab.dataValues):null
     await res.json({ status: "success" });
   } catch (error) {
     console.log(error)
@@ -1256,9 +1385,6 @@ routes.get("/getClientsWithACPayble", async (req, res) => {
           where:{CompanyId:'1'}
         }]
       }]
-    })
-    .catch((x)=>{
-      console.log(x)
     })
     await res.json({ status: "success", result});
   } catch (error) {
