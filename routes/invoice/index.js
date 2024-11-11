@@ -524,6 +524,22 @@ routes.get("/getAllOldInoivcesByPartyId", async(req, res) => {
     }
 });
 
+routes.get("/deleteInvoice", async(req, res) => {
+  try{
+    console.log(req.headers.id)
+    const invoice = await Invoice.findOne({where:{id:req.headers.id}})
+    console.log(invoice.dataValues)
+    await Charge_Head.update(
+      { invoice_id: null, status: 0 },
+      { where: { invoice_id: invoice.dataValues.invoice_No } }
+    );
+    await Invoice.destroy({where:{id:req.headers.id}})
+    res.json({status:'success'});
+  }catch(error){
+    res.json({status:'error', result:error});
+  }
+});
+
 routes.get("/dateExperiment", async(req, res) => {
   try {
     const from = moment("2023-02-23");
@@ -584,6 +600,7 @@ routes.get("/getAllInvoices", async(req, res) => {
     const result = await Invoice.findAll({
       where: {
         party_Id: ClientId,
+        payType: req.headers.paytype,
         id: { [Op.ne]: req.headers.invoiceid }
       },
       include: [

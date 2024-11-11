@@ -173,25 +173,34 @@ routes.post("/cheaqueReturned", async (req, res) => {
     const VHresult = await Voucher_Heads.create(vData);
 
 
-    const getInvoiceTransaction = await Invoice_Transactions.findOne({
+    const getInvoiceTransaction = await Invoice_Transactions.destroy({
        where:
       { InvoiceId: InvoiceId}
     
       
     })
-    const {...rest} = getInvoiceTransaction.dataValues;
+    // const {...rest} = getInvoiceTransaction.dataValues;
 
-    const UpdateInvoiceTransaction = await Invoice_Transactions.update(
-      {
-     ...rest,
-    amount: "0" },
-     {where:{ InvoiceId: InvoiceId}} 
+  //   const UpdateInvoiceTransaction = await Invoice_Transactions.update(
+  //     {
+  //    ...rest,
+  //   amount: "0" },
+  //    {where:{ InvoiceId: InvoiceId}} 
      
      
+  //  )
+
+   const updateInvoice = await Invoice.update(
+     {
+       recieved: "0",
+       status: "1",
+     },
+     {where:{ id:InvoiceId}}
    )
+   console.log(updateInvoice)
 
 
-   res.json({ status: "success", result:UpdateInvoiceTransaction });
+   res.json({ status: "success", result:updateInvoice });
   } catch (error) {
     console.log(error)
     res.json({ status: "error", result: error });
@@ -217,24 +226,31 @@ routes.post("/voucherEdit", async (req, res) => {
 routes.post("/deleteVoucher", async (req, res) => {
   try {
     let obj = {};
+    console.log(req.body.id.toString())
     if (req.body.type == "VoucherId Exists") {
+      console.log("If ran")
       obj = { id: req.body.id }
     } else {
+      console.log("else ran")
       obj = {
         invoice_Voucher: "1",
-        invoice_Id: req.body.id,
+        invoice_Id: req.body.id.toString(),
       }
     }
-    const findOne = await Vouchers.findOne({
+    const findAll = await Vouchers.findAll({
       where: obj,
     });
-    const resultOne = await Voucher_Heads.destroy({
-      where: { VoucherId: findOne.dataValues.id },
-    });
-    const resultTwo = await Vouchers.destroy({
-      where: { id: findOne.dataValues.id },
-    });
-    await res.json({ status: "success", result: { resultOne, resultTwo } });
+    for(let x of findAll){
+      console.log(x.dataValues.id)
+
+      const resultOne = await Voucher_Heads.destroy({
+        where: { VoucherId: x.dataValues.id },
+      });
+      const resultTwo = await Vouchers.destroy({
+        where: { id: x.dataValues.id },
+      });
+    }
+    await res.json({ status: "success", result: { findAll } });
   } catch (error) {
     res.json({ status: "error", result: error });
   }
@@ -509,7 +525,19 @@ routes.post("/getChildAccountIds", async (req, res) => {
 
 routes.post("/deletePaymentReceipt", async(req, res) => {
   try {
-
+    console.log(req.body.id)
+    const trans = await Invoice_Transactions.findAll({where:{VoucherId:req.body.id}})
+    for(let x of trans){
+      console.log(">>",x.dataValues)
+      const updateInvoice = await Invoice.update(
+        {
+          recieved: "0",
+          status: "1",
+        },
+        {where:{ id:x.dataValues.InvoiceId}}
+      )
+      console.log(">",updateInvoice)
+    }
     await Voucher_Heads.destroy({where:{VoucherId:req.body.id}})
     await Invoice_Transactions.destroy({where:{VoucherId:req.body.id}})
     await Vouchers.destroy({where:{id:req.body.id}})
