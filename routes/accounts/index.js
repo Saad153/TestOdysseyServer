@@ -746,7 +746,6 @@ routes.get("/getLedger", async(req, res) => {
         ...childAccountCondition,
         createdAt:{
           [Op.lte]: moment(req.headers.to).add(1, 'days').toDate(),
-          [Op.gte]: moment(req.headers.from).toDate(),
         },
 
       },
