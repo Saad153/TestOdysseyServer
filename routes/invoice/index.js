@@ -1080,7 +1080,7 @@ routes.get("/jobBalancing", async (req, res) => {
         [Op.gte]: moment(req.headers.from).toDate(),
         [Op.lte]: moment(req.headers.to).add(1, 'days').toDate(),
       },
-      status:{ [Op.ne]: null },
+      // status:{ [Op.ne]: null },
       // below condition make sures to display only Job-Invoice & Job-Bill
       [Op.and]: [
         { type: { [Op.ne]: "Agent Invoice" } },
@@ -1164,7 +1164,7 @@ routes.get("/invoiceBalancing", async (req, res) => {
         [Op.gte]: moment(req.headers.from).toDate(),
         [Op.lte]: moment(req.headers.to).add(1, 'days').toDate(),
       },
-      status:{ [Op.ne]: null },
+      // status:{ [Op.ne]: null },
       [Op.and]: [
         { type: { [Op.ne]: "Job Invoice" } },
         // { type: { [Op.ne]: "Old Job Invoice" } },
