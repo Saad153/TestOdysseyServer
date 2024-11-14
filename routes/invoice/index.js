@@ -330,10 +330,10 @@ routes.get("/getAllInoivcesByPartyId", async(req, res) => {
       },
       //{ model:Charge_Head, attributes:['net_amount', 'local_amount', 'currency', 'ex_rate'] }
     ];
-    // transactionObj = [
-    //   ...transactionObj,
-    //   { model:Invoice_Transactions, where:{VoucherId:req.headers.voucherid} }
-    // ]
+    transactionObj = [
+      ...transactionObj,
+      { model:Invoice_Transactions, where:{VoucherId:req.headers.voucherid} }
+    ]
     if(req.headers.edit=='true'){
       obj.id = req.headers.invoices.split(", ")
     } else {
@@ -728,6 +728,7 @@ const createInvoices = (lastJB, init, type, companyId, operation, x) => {
     invoice_No:(lastJB==null || lastJB.invoice_Id==null)?`${company}-${init}-${1}/${moment().add(1, 'years').format("YY")}`:`${company}-${init}-${parseInt(lastJB.invoice_Id)+parseInt(addition)}/${moment().add(1, 'years').format("YY")}`,
     invoice_Id: (lastJB==null || lastJB.invoice_Id==null)?1: parseInt(lastJB.invoice_Id)+parseInt(addition),
     type:type,
+    status: "1",
     companyId:companyId,
     operation:operation,
     payType: x.type,
