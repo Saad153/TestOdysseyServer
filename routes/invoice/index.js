@@ -12,6 +12,7 @@ const { Accounts, Vessel, Transaction } = require("../../models");
 const routes = require('express').Router();
 const Sequelize = require('sequelize');
 const moment = require("moment");
+const { Client } = require("pg");
 const Op = Sequelize.Op;
 
 const numCPUs = require('os').cpus().length;
@@ -1111,13 +1112,18 @@ routes.get("/jobBalancing", async (req, res) => {
     req.headers.jobtypes?.length>0?invoiceObj.operation=req.headers.jobtypes.split(","):null;
 
     // To include the Job, Bl & Equipments data in the invoices
-    let includeObj = {
+    let includeObj = [
+      {
+        model: Charge_Head,
+      },
+      {
       model:SE_Job,
-      required:false,
       include:[
+        { model:Voyage, attributes:['voyage', 'importArrivalDate', 'exportSailDate'] },
         { model:Clients, attributes:['code','name'] },
         { model:Bl, attributes:['hbl','mbl'] },
         { model:SE_Equipments, attributes:['qty', 'size'] },
+        { model: Clients, as:'shipper', attributes:['name'] },
         {
           model: Clients,
           as:'consignee', 
@@ -1139,15 +1145,16 @@ routes.get("/jobBalancing", async (req, res) => {
           attributes:['name']
         },
       ],
-      attributes:['id','weight','vol', 'fd', 'freightType', 'jobNo', 'operation','subType','jobDate','shipDate','arrivalDate'],
-    }
+      attributes:['id', 'weight', 'vol', 'fd', 'freightType', 'jobNo', 'operation', 'subType', 'jobDate', 'shipDate', 'arrivalDate', 'container', 'createdAt'],
+      
+    }]
 
     // overseas agent wise invoice/bill
     req.headers.overseasagent?includeObj.where = {overseasAgentId:req.headers.overseasagent}:null;
     const result = await Invoice.findAll({
       where:invoiceObj,
       attributes:['id','invoice_No', 'payType', 'currency', 'ex_rate', 'roundOff', 'total', 'paid', 'recieved', 'createdAt', 'party_Name'],
-      include:[includeObj],
+      include:includeObj,
       order: [[ 'createdAt', 'ASC' ]],
     });
     await res.json({ status: "success", result: result });
@@ -1204,8 +1211,12 @@ routes.get("/invoiceBalancing", async (req, res) => {
           }
         ],
         order: [[ 'createdAt', 'ASC' ]],
-        attributes:['id', 'fd', 'freightType', 'jobNo', 'operation'],
+        attributes:['id', 'fd', 'freightType', 'jobNo', 'operation', 'subType', 'vol', 'weight', 'container'],
+      },
+      {
+        model:Charge_Head,
       }]
+
     });
     await res.json({ status: "success", result: result });
   } catch (error) {

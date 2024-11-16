@@ -25,11 +25,11 @@ routes.get(`/${url}/get`, async(req, res) => {
     
     console.log(req.headers.accountid)
     const result = await Parent_Account.findAll({
-      attributes:['id', 'title'],
+      attributes:['id', 'title', 'code'],
       where:obj,
       include:[{
         model:Child_Account,
-        attributes:['id', 'title'],
+        attributes:['id', 'title', 'code'],
         include:[{
           model:Voucher_Heads,
           attributes:['amount', 'defaultAmount', 'type', 'accountType', 'settlement', 'createdAt', 'narration'],

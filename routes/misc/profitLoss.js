@@ -41,7 +41,7 @@ routes.get(`/${url}/job`, async(req, res) => {
     const result = await SE_Job.findAll({
       attributes:['id','jobNo','fd', 'createdAt', 'jobType', 'operation', 'weight',
         'subType','companyId','pcs','pol','exRate','costCenter','nomination',
-        'pkgUnit','customerRef','eta','shipDate'],
+        'pkgUnit','customerRef','eta','shipDate', 'vol'],
       where:obj,
       include:[
         {
