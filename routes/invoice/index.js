@@ -1145,7 +1145,7 @@ routes.get("/jobBalancing", async (req, res) => {
           attributes:['name']
         },
       ],
-      attributes:['id', 'weight', 'vol', 'fd', 'freightType', 'jobNo', 'operation', 'subType', 'jobDate', 'shipDate', 'arrivalDate', 'container', 'createdAt'],
+      attributes:['id', 'weight', 'vol', 'fd', 'freightType', 'jobNo', 'operation', 'subType', 'jobDate', 'shipDate', 'arrivalDate', 'container', 'createdAt', 'fileNo', 'customerRef'],
       
     }]
 
@@ -1153,7 +1153,7 @@ routes.get("/jobBalancing", async (req, res) => {
     req.headers.overseasagent?includeObj.where = {overseasAgentId:req.headers.overseasagent}:null;
     const result = await Invoice.findAll({
       where:invoiceObj,
-      attributes:['id','invoice_No', 'payType', 'currency', 'ex_rate', 'roundOff', 'total', 'paid', 'recieved', 'createdAt', 'party_Name'],
+      attributes:['id','invoice_No', 'payType', 'currency', 'ex_rate', 'roundOff', 'total', 'paid', 'recieved', 'createdAt', 'party_Name', 'companyId'],
       include:includeObj,
       order: [[ 'createdAt', 'ASC' ]],
     });
@@ -1197,13 +1197,23 @@ routes.get("/invoiceBalancing", async (req, res) => {
     (req.headers.overseasagent!=''&&req.headers.overseasagent!=null)?invoiceObj.party_Id=req.headers.overseasagent:null;
     const result = await Invoice.findAll({
       where:invoiceObj,
-      attributes:['id', 'invoice_No', 'payType', 'currency', 'ex_rate', 'roundOff', 'total', 'paid', 'recieved', 'createdAt', 'party_Name'],
+      attributes:['id', 'invoice_No', 'payType', 'currency', 'ex_rate', 'roundOff', 'total', 'paid', 'recieved', 'createdAt', 'party_Name', 'companyId'],
       include:[{
         model:SE_Job,
         include:[
+          { model: Clients, as:'shipper', attributes:['name'] },
+          { model: Clients, as:'Client', attributes:['name'] },
+          { model: Vessel, as:'vessel', attributes:['name'] },
+          { model: Voyage, as:'Voyage', attributes:['voyage'] },
+
+          {
+            model: Employees,
+            as:'sales_representator', 
+            attributes:['name']
+          },
           {
             model:Bl,
-            attributes:['hbl'],
+            attributes:['hbl', 'mbl'],
           },
           {
             model:SE_Equipments,
@@ -1211,7 +1221,7 @@ routes.get("/invoiceBalancing", async (req, res) => {
           }
         ],
         order: [[ 'createdAt', 'ASC' ]],
-        attributes:['id', 'fd', 'freightType', 'jobNo', 'operation', 'subType', 'vol', 'weight', 'container'],
+        attributes:['id', 'fd', 'freightType', 'jobNo', 'operation', 'subType', 'vol', 'weight', 'container', 'customerRef', 'fileNo', 'arrivalDate', 'shipDate'],
       },
       {
         model:Charge_Head,
