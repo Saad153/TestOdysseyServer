@@ -8,7 +8,7 @@ const { Clients, Client_Associations } = require("../../functions/Associations/c
 const { Vendors, Vendor_Associations } = require("../../functions/Associations/vendorAssociations");
 const { Charge_Head, Invoice, Invoice_Transactions } = require("../../functions/Associations/incoiceAssociations");
 const { Accounts } = require('../../models/');
-const Op = Sequelize.Op;
+const { Op, literal } = Sequelize;
 
 //Voucher Types
 // (For Jobs)
@@ -134,7 +134,7 @@ routes.post("/voucherCreation", async (req, res) => {
         }-${req.body.vType
         }-${check == null ? 1 : parseInt(check.voucher_No) + 1
         }/${moment().month() >= 6 ? moment().add(1, 'year').format('YY') : moment().format('YY')}`:req.body.voucher_Id,
-      }).catch((x) => console.log("Vouchers>>",x))
+      }).catch();
       let dataz = await setVoucherHeads(result.id, req.body.Voucher_Heads);
       const VH = await Voucher_Heads.bulkCreate(dataz);
       res.json({ status: "success", result: result });
@@ -197,7 +197,7 @@ routes.post("/cheaqueReturned", async (req, res) => {
      },
      {where:{ id:InvoiceId}}
    )
-   console.log(updateInvoice)
+  //  console.log(updateInvoice)
 
 
    res.json({ status: "success", result:updateInvoice });
@@ -209,12 +209,12 @@ routes.post("/cheaqueReturned", async (req, res) => {
 
 routes.post("/voucherEdit", async (req, res) => {
   try {
-    console.log("Body>>", req.body.Voucher_Heads)
+    // console.log("Body>>", req.body.Voucher_Heads)
     await Vouchers.update({ ...req.body }, { where: { id: req.body.id } })
     await Voucher_Heads.destroy({ where: { VoucherId: req.body.id } })
     req.body.Voucher_Heads.forEach(async (x) => {
       const result = await Voucher_Heads.upsert({ ...x, VoucherId: req.body.id, createdAt: req.body.createdAt });
-      console.log("Result>>", result)
+      // console.log("Result>>", result)
     });
     await res.json({ status: "success" });
   } catch (error) {
@@ -226,12 +226,12 @@ routes.post("/voucherEdit", async (req, res) => {
 routes.post("/deleteVoucher", async (req, res) => {
   try {
     let obj = {};
-    console.log(req.body.id.toString())
+    // console.log(req.body.id.toString())
     if (req.body.type == "VoucherId Exists") {
-      console.log("If ran")
+      // console.log("If ran")
       obj = { id: req.body.id }
     } else {
-      console.log("else ran")
+      // console.log("else ran")
       obj = {
         invoice_Voucher: "1",
         invoice_Id: req.body.id.toString(),
@@ -241,7 +241,7 @@ routes.post("/deleteVoucher", async (req, res) => {
       where: obj,
     });
     for(let x of findAll){
-      console.log(x.dataValues.id)
+      // console.log(x.dataValues.id)
 
       const resultOne = await Voucher_Heads.destroy({
         where: { VoucherId: x.dataValues.id },
@@ -315,7 +315,6 @@ routes.get("/getAccountActivity", async (req, res) => {
 
 routes.get("/getAllVouchers", async (req, res) => {
   try {
-    console.log()
     const result = await Vouchers.findAll({
       where: {
         CompanyId: req.headers.id,
@@ -374,8 +373,8 @@ routes.get("/getAllJobPayRecVouchers", async (req, res) => {
     
       include: [{
         model: Voucher_Heads,
-        attributes: ['type', 'amount'],
-        where: { type: "debit" }
+        attributes: ['type', 'amount', 'accountType', 'ChildAccountId'],
+        // where: { type: "debit" }
       }],
     });
     await res.json({ status: "success", result: result });
@@ -421,7 +420,7 @@ routes.get("/getVoucherByIdAdvanced", async (req, res) => {
         }]
       }],
     });
-    console.log(result)
+    // console.log(result)
     await res.json({ status: "success", result: result });
   } catch (error) {
     res.json({ status: "error", result: error });
@@ -525,10 +524,10 @@ routes.post("/getChildAccountIds", async (req, res) => {
 
 routes.post("/deletePaymentReceipt", async(req, res) => {
   try {
-    console.log(req.body.id)
+    // console.log(req.body.id)
     const trans = await Invoice_Transactions.findAll({where:{VoucherId:req.body.id}})
     for(let x of trans){
-      console.log(">>",x.dataValues)
+      // console.log(">>",x.dataValues)
       const updateInvoice = await Invoice.update(
         {
           recieved: "0",
@@ -536,7 +535,7 @@ routes.post("/deletePaymentReceipt", async(req, res) => {
         },
         {where:{ id:x.dataValues.InvoiceId}}
       )
-      console.log(">",updateInvoice)
+      // console.log(">",updateInvoice)
     }
     await Voucher_Heads.destroy({where:{VoucherId:req.body.id}})
     await Invoice_Transactions.destroy({where:{VoucherId:req.body.id}})
@@ -545,6 +544,144 @@ routes.post("/deletePaymentReceipt", async(req, res) => {
     res.json({status:'success',});
   }
   catch (error) {
+    res.json({status:'error', result:error});
+  }
+});
+
+routes.post("/makeTransaction", async(req, res) => {
+  try {
+    // console.log(req.body)
+    let invoices = req.body.invoices;
+    let invoicesList = ""
+    let narration  = ""
+    if(req.body.payType=="Recievable"){
+      narration = `Received ${req.body.subType}`
+      narration = req.body.checkNo?narration+" "+req.body.checkNo:narration
+      narration = req.body.checkDate?narration+", Date: "+moment(req.body.checkDate).format('YYYY-MM-DD'):narration
+    }else{
+      narration = `Paid ${req.body.subType}`
+      narration = req.body.checkNo?narration+" "+req.body.checkNo:narration
+      narration = req.body.checkDate?narration+", Date: "+moment(req.body.checkDate).format('YYYY-MM-DD'):narration
+    }
+    for(let x of invoices){
+      if(x.receiving!=0){
+        const updateInvoice = await Invoice.update(
+          {
+            recieved: literal(`CAST(recieved AS numeric) + ${x.receiving}`), // Cast `recieved` to numeric, then add
+            status: "1",
+          },
+          { where: { id: x.id } }
+        );
+        invoicesList += `${x.id},`
+        // console.log(x)
+        narration = `${narration}, Against`
+        narration = `${narration}, HBL# ${x.SE_Job.Bl.hbl}`
+        narration = `${narration}, MBL# ${x.SE_Job.Bl.mbl}`
+        narration = `${narration}, Invoice# ${x.invoice_No}`
+        narration = `${narration}, Job# ${x.SE_Job.jobNo}`
+        narration = `${narration}, For ${x.party_Name}`
+      }
+    }
+    // console.log(narration)
+    let v = {
+      type: `Job ${req.body.payType=="Receivable"?"Reciept":"Payment"}`,
+      vType: `${req.body.transactionMode=="Cash"?"C":"B"}${req.body.payType=="Recievable"?"R":"P"}V`,
+      currency: req.body.currency,
+      exRate: req.body.exRate,
+      chequeNo: req.body.checkNo,
+      chequeDate: req.body.checkDate,
+      costCenter: 'KHI',
+      invoices: invoicesList,
+      onAccount: req.body.type,
+      partyId: req.body.partyId,
+      partyName: req.body.partyName,
+      partyType: req.body.partyType,
+      tranDate: req.body.tranDate,
+      subType: req.body.subType,
+      CompanyId: req.body.companyId,
+    }
+    const lastVoucher = await Vouchers.findOne({
+      where: {
+        vType: v.vType,
+        CompanyId: v.CompanyId,
+      },
+      // order: [["voucher_No", "DESC"]],
+    })
+    if(lastVoucher==null){
+      v.voucher_No = 1
+      v.voucher_Id = `${v.CompanyId == 1 ? "SNS" : v.CompanyId == 2 ? "CLS" : "ACS"}-${v.vType}-${v.voucher_No}/${moment().month() >= 6 ? moment().add(1, 'year').format('YY') : moment().format('YY')}`
+    }else{
+      v.voucher_No = lastVoucher.voucher_No + 1
+      v.voucher_Id = `${v.CompanyId == 1 ? "SNS" : v.CompanyId == 2 ? "CLS" : "ACS"}-${v.vType}-${v.voucher_No}/${moment().month() >= 6 ? moment().add(1, 'year').format('YY') : moment().format('YY')}`
+    }
+    
+    const voucher = await Vouchers.create(
+      v
+    )
+    let account
+    if(req.body.partyType=='client'){
+      account = await Client_Associations.findOne({
+        where: { ClientId: req.body.partyId }
+      })
+    }else{
+      account = await Vendor_Associations.findOne({
+        where: { VendorId: req.body.partyId }
+      })
+    }
+    
+    for(let x of req.body.transactions){
+      console.log(x)
+      let amount = 0
+      if(x.type=='credit'){
+        amount = x.credit
+      }else {
+        amount = x.debit
+      }
+      if(x.accountName!="Total"){
+        if(x.accountType=='partyAccount'){
+          await Voucher_Heads.create(
+            {
+              amount: amount,
+              defaultAmount: x.currency=="PKR"?amount:amount*req.body.exRate,
+              type: x.type,
+              accountType: x.accountType,
+              VoucherId: voucher.id,
+              ChildAccountId: account.ChildAccountId,
+              narration: narration
+            }
+          )
+        }else{
+          await Voucher_Heads.create(
+            {
+              amount: amount,
+              defaultAmount: x.currency=="PKR"?amount:amount*req.body.exRate,
+              type: x.type,
+              accountType: x.accountType,
+              VoucherId: voucher.id,
+              ChildAccountId: x.partyId,
+              narration: narration
+            }
+          )
+        }
+    }
+    }
+    for(let x of invoices){
+      if(x.receiving!=0){
+        let a = await Invoice_Transactions.create(
+          {
+            gainLoss: req.body.gainLoss,
+            amount: req.body.totalReceiving,
+            InvoiceId: x.id,
+            VoucherId: voucher.id
+            
+          }
+        )
+      }
+    }
+    res.json({status:'success', result: voucher});
+  }
+  catch (error) {
+    console.log(error)
     res.json({status:'error', result:error});
   }
 });

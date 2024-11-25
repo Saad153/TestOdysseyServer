@@ -301,133 +301,44 @@ routes.get("/testResetSomeInvoices", async(req, res) => {
 
 routes.get("/getAllInoivcesByPartyId", async(req, res) => {
   try {
-    let obj = {
-      approved:"1",
-      party_Id:req.headers.id,
-      companyId:req.headers.companyid
-    }
-    if(req.headers.party=="agent"){
-      obj.currency = req.headers.invoicecurrency
-    } else {
-      obj.payType = req.headers.pay
-    }
-    let transactionObj = [
-      { 
-        model:SE_Job,  
-        attributes:['id', 'jobNo', 'subType'],
-        include:[
-          {
-            model:Bl,
-            attributes:['hbl', 'mbl'],
-            include:[
-              {
-                model:Container_Info,
-                attributes:['no']
-              }
-            ]
-          },
-        ]
-        //where:{companyId:req.headers.companyid} 
-      },
-      //{ model:Charge_Head, attributes:['net_amount', 'local_amount', 'currency', 'ex_rate'] }
-    ];
-    transactionObj = [
-      ...transactionObj,
-      { model:Invoice_Transactions, where:{VoucherId:req.headers.voucherid} }
-    ]
-    if(req.headers.edit=='true'){
-      obj.id = req.headers.invoices.split(", ")
-    } else {
-      obj.status = { [Op.ne]: '2' }
+    console.log("ID>>",req.headers)
+    // account = req.headers.type == "client" ? Client_Associations : Vendor_Associations;
+    // acc = await account.findOne({
+    //   where: {
+    //     [req.headers.type === "client" ? 'ClientId' : 'VendorId']: req.headers.id
+    //   }
+    // });
+    // console.log(acc.dataValues.ChildAccountId)
+    let obj = {}
+    if(req.headers.type != "agent"){
+      obj = {
+        payType: req.headers.pay
+      };
+
     }
     const result = await Invoice.findAll({
-      where:obj,
-      attributes:['id','invoice_No', 'invoice_Id', 'payType', 'recieved', 'paid', 'status', 'total', 'currency', 'roundOff', 'party_Id', 'operation', 'ex_rate'],
-      order:[['invoice_Id', 'ASC']],
-      include: [
+      where:{
+        approved:"1",
+        party_Id:req.headers.id,
+        ...obj
+      },
+      include:[
         {
-          model: Invoice_Transactions, // Add any desired attributes for Invoice_Transactions
-        },
-        {
-          model: SE_Job,
-          attributes: ['id', 'jobNo', 'subType'],
-          include: [
-            {
-              model: Bl,
-              attributes: ['hbl', 'mbl'],
-              include: [
-                {
-                  model: Container_Info,
-                  attributes: ['no']
-                }
-              ]
-            }
+          model:SE_Job,
+          attributes:['jobNo', 'subType'],
+          include:[
+            { model:SE_Equipments, attributes:['qty', 'size'] },
+            { model:Bl, required: false, attributes:['mbl', 'hbl'] },
           ]
         }
-      ],
-    });
-    let partyAccount = null;
-    if(result.length>0){
-      if(req.headers.party=="vendor"){
-        partyAccount = await Vendor_Associations.findAll({
-          where:{
-            VendorId:result[0].party_Id,
-            CompanyId:req.headers.companyid  //<-- I'm Unsure About This 
-          },
-          include:[
-            {
-              model:Child_Account,
-              include:[
-                {
-                  model:Parent_Account,
-                  //where:{ title:req.headers.pay=="Recievable"?"ACCOUNT RECEIVABLE":"ACCOUNT PAYABLE" }
-                }
-              ]
-            }
-          ]
-        })
-      } else if(req.headers.party=="agent"){
-        partyAccount = await Vendor_Associations.findAll({
-          where:{
-            VendorId:result[0].party_Id,
-            CompanyId:req.headers.companyid  //<-- I'm Unsure About This 
-          },
-          include:[
-            {
-              model:Child_Account,
-              include:[
-                {
-                  model:Parent_Account,
-                  //where:{ title:req.headers.pay=="Recievable"?"ACCOUNT RECEIVABLE":"ACCOUNT PAYABLE" }
-                }
-              ]
-            }
-          ]
-        })
-      } else {
-        partyAccount = await Client_Associations.findAll({
-          where:{ 
-            ClientId:result[0].party_Id, 
-            CompanyId:req.headers.companyid 
-          },
-          include:[
-            {
-              model:Child_Account,
-              include:[
-                {
-                  model:Parent_Account,
-                  //where:{ title:req.headers.pay=="Recievable"?"ACCOUNT RECEIVABLE":"ACCOUNT PAYABLE" }
-                }
-              ]
-            }
-          ]
-        });
-      }
+      ]
+    })
+    console.log("Result",result)
+    if(req.headers.edit==false){
     }
-
-    res.json({ status:'success', result:result, account:partyAccount });
+    res.json({status:'success', result:result});
   } catch (error) {
-
+    console.log(error)
     res.json({status:'error', result:error});
   }
 });
@@ -831,6 +742,7 @@ routes.post("/makeInvoiceNew", async(req, res) => {
       }
     });
     const newInv = await Invoice.create(createdInvoice);
+    console.log(newInv)
     // const newCharges = await charges.map((x)=>{
     //   return{ ...x, InvoiceId:newInv.id }
     // })
@@ -868,12 +780,18 @@ routes.get("/getInvoices", async(req, res) =>{
 
 routes.post("/approve", async(req, res) => {
   try{
+    console.log(req.body)
     const chargesHeads = await Charge_Head.findAll({
       where:{InvoiceId:req.body.id}
     })
+    const Inv = await Invoice.findOne({where:{id:req.body.id}})
     let total = 0.0;
+    let defaultTotal = 0.0
+    console.log(Inv.dataValues.currency)
     for(let x of chargesHeads){
-      x.partyType=="client"?total += parseFloat(x.dataValues.local_amount):total += parseFloat(x.dataValues.amount)  
+      console.log(x.dataValues)
+      Inv.dataValues.currency=="PKR"?total += parseFloat(x.dataValues.local_amount):total += parseFloat(x.dataValues.amount)  
+      defaultTotal += parseFloat(x.dataValues.local_amount)
     }
     const invoice = await Invoice.findOne({where:{id:req.body.id}})
     await invoice.update({total:total, approved:1})
@@ -925,6 +843,7 @@ routes.post("/approve", async(req, res) => {
   if(invoice.dataValues.roundOff=="0"){  
     Voucher_Head.push({
       amount:total,
+      defaultAmount: defaultTotal,
       type:invoice.dataValues.payType=="Recievable"?"debit":"credit",
       narration:narration,
       VoucherId:voucher.dataValues.id,
@@ -932,6 +851,7 @@ routes.post("/approve", async(req, res) => {
     })
     Voucher_Head.push({
       amount:total,
+      defaultAmount: defaultTotal,
       type:invoice.dataValues.payType=="Recievable"?"credit":"debit",
       narration:narration,
       VoucherId:voucher.dataValues.id,
@@ -940,6 +860,7 @@ routes.post("/approve", async(req, res) => {
   } else if(parseFloat(invoice.dataValues.roundOff)>"0"  && invoice.dataValues.payType=="Recievable"){
    Voucher_Head.push({
       amount:amount + parseFloat(invoice.dataValues.roundOff),
+      defaultAmount: defaultTotal,
       type:invoice.dataValues.payType=="Recievable"?"debit":"credit",
       narration:narration,
       VoucherId:voucher.dataValues.id,
@@ -947,6 +868,7 @@ routes.post("/approve", async(req, res) => {
     })
     Voucher_Head.push({
       amount:amount + parseFloat(invoice.dataValues.roundOff),
+      defaultAmount: defaultTotal,
       type:"credit",
       narration:narration,
       VoucherId:voucher.dataValues.id,
@@ -955,6 +877,7 @@ routes.post("/approve", async(req, res) => {
   } else if(parseFloat(invoice.dataValues.roundOff)<"0"  && invoice.dataValues.payType=="Recievable"){
     Voucher_Head.push({
       amount:amount- parseFloat(invoice.dataValues.roundOff)*-1,
+      defaultAmount: defaultTotal,
       type:invoice.dataValues.payType=="Recievable"?"debit":"credit",
       narration:narration,
       VoucherId:voucher.dataValues.id,
@@ -969,6 +892,7 @@ routes.post("/approve", async(req, res) => {
     })
     Voucher_Head.push({
       amount:parseFloat(invoice.dataValues.roundOff)*-1,
+      defaultAmount: defaultTotal,
       type:invoice.dataValues.payType=="Recievable"?"debit":"credit",
       narration:narration,
       VoucherId:voucher.dataValues.id,
@@ -977,6 +901,7 @@ routes.post("/approve", async(req, res) => {
   } else if(parseFloat(invoice.dataValues.roundOff) >0  && invoice.dataValues.payType!="Recievable"){
     Voucher_Head.push({
       amount:amount+ parseFloat(invoice.dataValues.roundOff),
+      defaultAmount: defaultTotal,
       type:"credit",
       narration:narration,
       VoucherId:voucher.dataValues.id,
@@ -984,6 +909,7 @@ routes.post("/approve", async(req, res) => {
     })
     Voucher_Head.push({
       amount:amount + parseFloat(invoice.dataValues.roundOff),
+      defaultAmount: defaultTotal,
       type:"debit",
       narration:narration,
       VoucherId:voucher.dataValues.id,
@@ -992,6 +918,7 @@ routes.post("/approve", async(req, res) => {
   } else if(parseFloat(invoice.dataValues.roundOff) <0  && invoice.dataValues.payType!="Recievable"){
     Voucher_Head.push({
       amount:(amount - parseFloat(invoice.dataValues.roundOff)*-1).toFixed(2),
+      defaultAmount: defaultTotal,
       type:"credit",
       narration:narration,
       VoucherId:voucher.dataValues.id,
@@ -999,6 +926,7 @@ routes.post("/approve", async(req, res) => {
     })
     Voucher_Head.push({
       amount:(amount).toFixed(2),
+      defaultAmount: defaultTotal,
       type:"debit",
       narration:narration,
       VoucherId:voucher.dataValues.id,
@@ -1006,6 +934,7 @@ routes.post("/approve", async(req, res) => {
     })
     Voucher_Head.push({
       amount:(parseFloat(invoice.dataValues.roundOff)*-1).toFixed(2),
+      defaultAmount: defaultTotal,
       type:"credit",
       narration:narration,
       VoucherId:voucher.dataValues.id,
