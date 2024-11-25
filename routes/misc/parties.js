@@ -11,7 +11,7 @@ const url = 'parties';
 const moment = require("moment");
 
 routes.post(`/${url}/getBySearch`, async(req, res) => {
-  console.log(req.body.search)
+  console.log(req.body)
   try {
     let result;
     if(req.body.type=="client"){
