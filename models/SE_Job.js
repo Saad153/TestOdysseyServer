@@ -1,6 +1,7 @@
 module.exports = (sequelize, DataTypes) => {
     const SE_Job = sequelize.define("SE_Job", {
         jobNo: { type:DataTypes.STRING },
+        gd: { type:DataTypes.STRING },
         jobId: { type:DataTypes.INTEGER },
         title:{ type:DataTypes.STRING },
         customerRef:{ type:DataTypes.STRING },
@@ -40,6 +41,7 @@ module.exports = (sequelize, DataTypes) => {
         eRlDate: { type:DataTypes.STRING },
         eRlTime: { type:DataTypes.STRING },
         jobDate: { type:DataTypes.STRING },
+        gdDate: { type:DataTypes.STRING },
         shipDate: { type:DataTypes.STRING },
         doorMove: { type:DataTypes.STRING },
         cutOffDate: { type:DataTypes.STRING },
@@ -71,6 +73,8 @@ module.exports = (sequelize, DataTypes) => {
         arrivalTime  :{ type:DataTypes.STRING },
         departureDate:{ type:DataTypes.STRING },
         departureTime:{ type:DataTypes.STRING },
+        regPageNo:{ type:DataTypes.STRING },
+        gross:{ type:DataTypes.STRING }
     })
     return SE_Job;
 }

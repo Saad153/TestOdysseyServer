@@ -3,6 +3,9 @@ module.exports = (sequelize, DataTypes) => {
         size:{
             type:DataTypes.STRING
         },
+        container:{
+            type:DataTypes.STRING
+        },
         qty:{
             type:DataTypes.STRING
         },
