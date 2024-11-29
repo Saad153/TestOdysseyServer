@@ -605,24 +605,48 @@ routes.post("/makeTransaction", async(req, res) => {
     }
     let i = 0
     for(let x of invoices){
-
+      console.log(x)
       if(x.receiving!=0){
         if(!req.body.edit){
-          const updateInvoice = await Invoice.update(
-            {
-              recieved: literal(`CAST(recieved AS numeric) + ${x.receiving}`), // Cast `recieved` to numeric, then add
-              status: "1",
-            },
-            { where: { id: x.id } }
-          );
+          if(x.payType=="Receivable"){
+            const updateInvoice = await Invoice.update(
+              {
+                recieved: literal(`CAST(recieved AS numeric) + ${x.receiving}`), // Cast `recieved` to numeric, then add
+                status: "1",
+              },
+              { where: { id: x.id } }
+            );
+            
+          }else{
+            const updateInvoice = await Invoice.update(
+              {
+                paid: literal(`CAST(recieved AS numeric) + ${x.receiving}`), // Cast `recieved` to numeric, then add
+                status: "1",
+              },
+              { where: { id: x.id } }
+            );
+
+          }
         }else{
-          const updateInvoice = await Invoice.update(
-            {
-              recieved: x.receiving, // Cast `recieved` to numeric, then add
-              status: "1",
-            },
-            { where: { id: x.id } }
-          );
+          if(x.payType=="Receivable"){
+            const updateInvoice = await Invoice.update(
+              {
+                recieved: x.receiving, // Cast `recieved` to numeric, then add
+                status: "1",
+              },
+              { where: { id: x.id } }
+            );
+            
+          }else{
+
+            const updateInvoice = await Invoice.update(
+              {
+                paid: x.receiving, // Cast `recieved` to numeric, then add
+                status: "1",
+              },
+              { where: { id: x.id } }
+            );
+          }
         }
         invoicesList += `${x.id},`
         if(i == 0){
@@ -631,7 +655,6 @@ routes.post("/makeTransaction", async(req, res) => {
           narration = `${narration}, MBL# ${x.SE_Job.Bl.mbl}`
         }
         narration = `${narration}, Invoice# ${x.invoice_No}`
-        console.log(i, invoices.length)
         if(i == invoices.length-1){
           narration = `${narration}, Job# ${x.SE_Job.jobNo}`
           narration = `${narration}, For ${x.party_Name}`
@@ -639,7 +662,6 @@ routes.post("/makeTransaction", async(req, res) => {
       }
       i++
     }
-    console.log(invoicesList)
     let vID = req.body.voucherId
     let vouchers
     if(!req.body.edit){
@@ -703,7 +725,7 @@ routes.post("/makeTransaction", async(req, res) => {
     }
     
     for(let x of req.body.transactions){
-      let amount = 0
+      let amount = 0.0
       if(x.type=='credit'){
         amount = x.credit
       }else {
