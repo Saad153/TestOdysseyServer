@@ -607,10 +607,10 @@ routes.post("/makeTransaction", async(req, res) => {
     }
     let i = 0
     for(let x of invoices){
-      console.log(x)
       if(x.receiving!=0){
+        console.log("State Edit>>>", !req.body.edit)
         if(!req.body.edit){
-          if(x.payType=="Receivable"){
+          if(x.payType=="Recievable"){
             const updateInvoice = await Invoice.update(
               {
                 recieved: literal(`CAST(recieved AS numeric) + ${x.receiving}`), // Cast `recieved` to numeric, then add
@@ -630,7 +630,8 @@ routes.post("/makeTransaction", async(req, res) => {
 
           }
         }else{
-          if(x.payType=="Receivable"){
+          console.log(">>>>>>>>>> ",x.payType)
+          if(x.payType=="Recievable"){
             const updateInvoice = await Invoice.update(
               {
                 recieved: x.receiving, // Cast `recieved` to numeric, then add
