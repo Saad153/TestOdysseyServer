@@ -380,9 +380,9 @@ routes.get("/getAllJobPayRecVouchers", async (req, res) => {
     });
     invoice=[]
     result.forEach((x) => {
-      x.dataValues.invoices.split(",").forEach((y) => {
+      x.dataValues.invoices!=null?x.dataValues.invoices.split(",").forEach((y) => {
         y!=''?invoice.push(y):null
-      })
+      }):null
     })
     console.log(invoice)
     const invoices = await Invoice.findAll({
@@ -431,6 +431,7 @@ routes.get("/getVoucherById", async (req, res) => {
       include: [
         { 
           model: Voucher_Heads,
+          required: false,
           include:[{
             model:Child_Account,
             attributes:['title']
@@ -438,6 +439,7 @@ routes.get("/getVoucherById", async (req, res) => {
         }
       ],
     });
+    console.log("Result>>>", result)
     await res.json({ status: "success", result: result });
   } catch (error) {
     res.json({ status: "error", result: error });
