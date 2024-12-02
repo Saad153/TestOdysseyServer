@@ -947,6 +947,18 @@ routes.post("/openingInvoice", async(req, res) => {
       await Voucher_Heads.create(x)
     })
 
+    await Invoice.update(
+        {
+            approved: "1"
+        },
+        {
+            where: {
+                id: invoices.dataValues.id
+            }
+        }
+    );
+  
+
     res.json({status:'success', result:{invoices}});
   }catch(e){
     console.log(e)
