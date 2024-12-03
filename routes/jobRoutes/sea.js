@@ -221,8 +221,10 @@ routes.post("/create", async(req, res) => {
 
   const createEquip = (list, id) => {
     let result = [];
+    console.log(list)
     list.forEach((x) => {
-      if(x.size!=''&&x.qty!='', x.dg!='', x.teu!=''){
+      if(x.size!=''&&x.qty!='', x.dg!=''){      // removing teu check for Cargolinkers
+        console.log("check2");
         delete x.id
         result.push({...x, SEJobId:id, teu:`${x.teu}`})
       }
@@ -230,7 +232,7 @@ routes.post("/create", async(req, res) => {
     return result;
   }
   try {
-
+console.log('>>>>>>>>',req.body.data)
     let data = req.body.data
     delete data.id
     data.customCheck = data.customCheck.toString();
@@ -242,16 +244,20 @@ routes.post("/create", async(req, res) => {
     } else {
       data.airLineId=null
     }
+    console.log("check1>>",data.operation,data.companyId)
     const check = await SE_Job.findOne({
       order:[['jobId','DESC']], attributes:["jobId"],
       where:{operation:data.operation, companyId:data.companyId}
     });
+    console.log("check>>>>",check);
     const result = await SE_Job.create({
       ...data,
       jobId:check==null?1:parseInt(check.jobId)+1,
       jobNo:`${data.companyId=="1"?"SNS":data.companyId=="2"?"CLS":"ACS"}-${data.operation}${data.operation=="SE"?"J":data.operation=="SI"?"J":""}-${check==null?1:parseInt(check.jobId)+1}/${moment().format("YY")}`
-    }).catch((x)=>console.log(x.message))
-    await SE_Equipments.bulkCreate(createEquip(data.equipments,  result.id)).catch((x)=>console.log(x))
+    }).catch((x)=>console.log(x))
+    console.log("result",result)
+    const resultTwo = await SE_Equipments.bulkCreate(createEquip(data.equipments,  result.id)).catch((x)=>console.log(x,resultTwo))
+    console.log("resultTwo",resultTwo)
     res.json({status:'success', result:await getJob(result.id)});
   }
   catch (error) {
@@ -261,10 +267,14 @@ routes.post("/create", async(req, res) => {
 
 routes.post("/edit", async(req, res) => {
     const createEquip = (list, id) => {
+        // console.log("list >>>>>>",list);
         let result = [];
         list.forEach((x)=>{
-            if(x.size!=''&&x.qty!='', x.dg!='', x.teu!=''){
-                delete x.id
+            if(x.size!=''&&x.qty!=''){    // removing teu and dg check for Cargolinkers
+                x.id && delete x.id
+                // x.SEJobId && delete x.SEJobId
+                // x.createdAt && delete x.createdAt
+                // x.updatedAt && delete x.updatedAt
                 result.push({...x, SEJobId:id, teu:`${x.teu}`})
             }
         })
@@ -272,11 +282,13 @@ routes.post("/edit", async(req, res) => {
     }
     try {
         let data = req.body.data
+        // console.log("check",data)
         data.customCheck = data.customCheck.toString();
         data.transportCheck = data.transportCheck.toString();
         data.approved = data.approved.toString();
         await SE_Job.update(data,{where:{id:data.id}}).catch((x)=>console.log(1));
-        await SE_Equipments.destroy({where:{SEJobId:data.id}}).catch((x)=>console.log(2))
+        const result = await SE_Equipments.destroy({where:{SEJobId:data.id}}).catch((x)=>console.log(2))
+        // console.log('result',result);
         await SE_Equipments.bulkCreate(createEquip(data.equipments, data.id)).catch((x)=>console.log(x))
         res.json({status:'success', result:await getJob(data.id)});
     }  
@@ -301,11 +313,15 @@ routes.get("/get", async(req, res) => {
           attributes:['hbl', 'mbl']
         },
         {
+          model:SE_Equipments,
+          attributes:['container']
+        },
+        {
           model:Clients,
           attributes:['name']
         }
       ],
-      attributes:['id', 'createdAt','approved', 'jobNo', 'nomination', 'freightType', 'pol', 'pod', 'fd', 'weight', 'transportCheck', 'customCheck'],
+      attributes:['id', 'operation', 'createdAt','approved', 'jobNo', 'gd', 'nomination', 'freightType', 'pol', 'pod', 'fd', 'weight', 'pcs', 'pkgUnit', 'transportCheck', 'customCheck', 'subType', 'customerRef'],
       order:[["createdAt", "DESC"]],
     }).catch((x)=>console.log(x))
     res.json({status:'success', result:result});
