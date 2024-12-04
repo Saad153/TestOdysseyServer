@@ -408,7 +408,7 @@ routes.get("/getAllJobPayRecVouchers", async (req, res) => {
       inv = []
       invoices.forEach((y)=>{
         y.dataValues.receiving = 0.0;
-        console.log(y.dataValues.SE_Job.jobNo)
+        // console.log(y.dataValues.SE_Job?.jobNo)
         if(x.dataValues.invoices.includes(y.dataValues.id)){
           inv.push(y.dataValues)
         }
@@ -574,6 +574,7 @@ routes.post("/deletePaymentReceipt", async(req, res) => {
       const updateInvoice = await Invoice.update(
         {
           recieved: "0",
+          paid: "0",
           status: "1",
         },
         {where:{ id:x.dataValues.InvoiceId}}
@@ -654,12 +655,12 @@ routes.post("/makeTransaction", async(req, res) => {
         invoicesList += `${x.id},`
         if(i == 0){
           narration = `${narration}, Against`
-          narration = `${narration}, HBL# ${x.SE_Job.Bl.hbl}`
-          narration = `${narration}, MBL# ${x.SE_Job.Bl.mbl}`
+          narration = `${narration}, HBL# ${x.SE_Job?.Bl.hbl}`
+          narration = `${narration}, MBL# ${x.SE_Job?.Bl.mbl}`
         }
         narration = `${narration}, Invoice# ${x.invoice_No}`
         if(i == invoices.length-1){
-          narration = `${narration}, Job# ${x.SE_Job.jobNo}`
+          narration = `${narration}, Job# ${x.SE_Job?.jobNo}`
           narration = `${narration}, For ${x.party_Name}`
         }
       }
@@ -670,7 +671,7 @@ routes.post("/makeTransaction", async(req, res) => {
     if(!req.body.edit){
 
       let v = {
-        type: `Job ${req.body.payType=="Receivable"?"Reciept":"Payment"}`,
+        type: `Job ${req.body.payType=="Recievable"?"Reciept":"Payment"}`,
         vType: `${req.body.transactionMode=="Cash"?"C":"B"}${req.body.payType=="Recievable"?"R":"P"}V`,
         currency: req.body.currency,
         exRate: req.body.exRate,
@@ -700,7 +701,7 @@ routes.post("/makeTransaction", async(req, res) => {
         v.voucher_No = lastVoucher.voucher_No + 1
         v.voucher_Id = `${v.CompanyId == 1 ? "SNS" : v.CompanyId == 2 ? "CLS" : "ACS"}-${v.vType}-${v.voucher_No}/${moment().month() >= 6 ? moment().add(1, 'year').format('YY') : moment().format('YY')}`
       }
-      
+      console.log(v.voucher_No)
       vouchers = await Vouchers.create(
         v
       )
