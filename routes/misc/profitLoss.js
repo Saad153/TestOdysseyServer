@@ -46,7 +46,7 @@ routes.get(`/${url}/job`, async(req, res) => {
       include:[
         {
           model:Invoice,
-          attributes:['id', 'total', 'payType', 'recieved' , 'paid', 'type', 'status', 'ex_rate'],
+          attributes:['id', 'total', 'payType', 'recieved' , 'paid', 'type', 'status', 'ex_rate', 'currency'],
           where: {
             approved:'1',
           },
