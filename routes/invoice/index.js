@@ -945,7 +945,7 @@ routes.post("/deleteOpeningInvoices", async(req, res) => {
   try{
     await Invoice.destroy({where:{id:req.body.headers.id}})
     const voucher = await Vouchers.findOne({where:{invoice_Id:req.body.headers.id}})
-    await Vouchers.destroy({where:{invoice_Id:req.boheadersdy.id}})
+    await Vouchers.destroy({where:{invoice_Id:req.body.headers.id}})
     await Voucher_Heads.destroy({where:{VoucherId:voucher.dataValues.id}})
     res.json({status: 'success', result: req.body.headers.id});
   }catch(e){

@@ -3,12 +3,61 @@ const routes = require('express').Router();
 const Sequelize = require('sequelize');
 const { Invoice, Charge_Head } = require("../../functions/Associations/incoiceAssociations");
 const { SE_Job, SE_Equipments } = require("../../functions/Associations/jobAssociations/seaExport");
-const { Clients } = require("../../functions/Associations/clientAssociation");
+const { Clients, Client_Associations } = require("../../functions/Associations/clientAssociation");
 const { Vendors } = require("../../functions/Associations/vendorAssociations");
 const { Employees } = require("../../functions/Associations/employeeAssociations");
 const Op = Sequelize.Op;
 const url = 'parties';
 const moment = require("moment");
+
+routes.get(`/${url}/getPartiesbyType`, async (req, res) => {
+  try{
+    console.log(req.body)
+    console.log(req.headers)
+    let result
+    if(req.headers.type == 'client'){
+      result = await Clients.findAll({
+        attributes:['id', 'name', 'code'],
+        include: {
+          model: Client_Associations,
+          where: {
+            CompanyId: req.headers.companyid
+          }
+        }
+      })
+    }else if(req.headers.type == 'vendor'){
+      result = await Vendors.findAll({
+        attributes:['id', 'name', 'code'],
+        include: {
+          model: Vendor_Associations,
+          where: {
+            CompanyId: req.headers.companyid
+          }
+        },
+        where:{
+          types: Sequelize.where(Sequelize.fn('LOWER', Sequelize.col('types')), 'NOT LIKE', '%overseas agent%'),
+        }
+      })
+    }else if(req.headers.type == 'agent'){
+      result = await Vendors.findAll({
+        attributes:['id', 'name', 'code'],
+        include: {
+          model: Vendor_Associations,
+          where: {
+            CompanyId: req.headers.companyid
+          }
+        },
+        where: {
+          types: Sequelize.where(Sequelize.fn('LOWER', Sequelize.col('types')), 'LIKE', '%agent%')
+        }
+      })
+    }
+    console.log(result.dataValues)
+    res.json({status:'success', result:result});
+  }catch(e){
+    console.log(e)
+  }
+})
 
 routes.post(`/${url}/getBySearch`, async(req, res) => {
   console.log(req.body)
