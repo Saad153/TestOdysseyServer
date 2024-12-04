@@ -762,9 +762,9 @@ routes.post("/openingInvoice", async(req, res) => {
   try{
     const lastOI = await Invoice.findOne({where:{type:'Opening Invoice'},     order:[['invoice_Id', 'DESC']], attributes:["id","invoice_Id"], include:[{model:Charge_Head, attributes:['id']}]});
     const lastOB = await Invoice.findOne({where:{type:'Opening Bill'},     order:[['invoice_Id', 'DESC']], attributes:["id","invoice_Id"], include:[{model:Charge_Head, attributes:['id']}]});
-    console.log(req.body)
-    console.log(lastOI)
-    console.log(lastOB)
+    // console.log(req.body)
+    // console.log(lastOI)
+    // console.log(lastOB)
     const invoice = {
       invoice_No: `${req.body.companyId=="1"?'SNS':"ACS"}-${req.body.type}-${req.body.type=="OI"?lastOI!=null?lastOI.invoice_Id+1:1:lastOB!=null?lastOB.invoice_Id+1:1}/${moment().add(1, 'years').format("YY")}`,
       invoice_Id: req.body.type=="OI"?lastOI!=null?lastOI.invoice_Id+1:1:lastOB!=null?lastOB.invoice_Id+1:1,
@@ -787,11 +787,17 @@ routes.post("/openingInvoice", async(req, res) => {
       partyType: req.body.partyType
     }
     const invoices = await Invoice.create(invoice);
-    console.log(invoices.dataValues)
+    console.log(invoices.dataValues.createdAt)
+
+    const check = await Vouchers.findOne({
+      order: [["voucher_No", "DESC"]],
+      attributes: ["voucher_No"],
+      where: { vType: invoices.dataValues.payType=="Recievable"?"SI":"PI", CompanyId: invoices.dataValues.companyId }
+    });
 
     vouchers = {
-      type:invoices.dataValues.payType=="Recievable"?"Job Recievable":"Job Payble",
-      vType:invoices.dataValues.payType=="Recievable"?"SI":"PI",
+      type:invoices.dataValues.payType=="Recievable"?"Opening Reciept":"Opening Payment",
+      vType:invoices.dataValues.payType=="Recievable"?"OI":"OB",
       CompanyId:invoices.dataValues.companyId,
       amount:"",
       currency:invoices.dataValues.currency,
@@ -803,145 +809,62 @@ routes.post("/openingInvoice", async(req, res) => {
       invoice_Id:invoices.dataValues.id,
       partyId: invoices.dataValues.party_Id,
       partyName: invoices.dataValues.party_Name,
+      createdAt: invoices.dataValues.createdAt,
+      updatedAt: invoices.dataValues.createdAt,
+      voucher_No: check == null ? 1 : parseInt(check.voucher_No) + 1,
+      voucher_Id: `${invoices.dataValues.companyId == 1 ? "SNS" : invoices.dataValues.companyId == 2 ? "CLS" : "ACS"}-${invoices.dataValues.payType=="Recievable"?"OI":"OB"}-${check == null ? 1 : parseInt(check.voucher_No) + 1}/${moment().month() >= 6 ? moment().add(1, 'year').format('YY') : moment().format('YY')}`
     }
 
-    const check = await Vouchers.findOne({
-      order: [["voucher_No", "DESC"]],
-      attributes: ["voucher_No"],
-      where: { vType: vouchers.vType, CompanyId: invoices.dataValues.companyId }
-    });
+    console.log("Vouchers>>",vouchers)
+
+    
 
     const voucher = await Vouchers.create({
-      ...vouchers,
-      voucher_No: check == null ? 1 : parseInt(check.voucher_No) + 1,
-      voucher_Id: `${invoices.dataValues.companyId == 1 ? "SNS" : invoices.dataValues.companyId == 2 ? "CLS" : "ACS"}
-      -${vouchers.vType}
-      -${check == null ? 1 : parseInt(check.voucher_No) + 1}
-      /${moment().month() >= 6 ? moment().add(1, 'year').format('YY') : moment().format('YY')}`
-    })
+      ...vouchers, // Spread your `vouchers` object
+      updatedAt: invoices.dataValues.createdAt, // Explicitly set updatedAt to createdAt
+    });
 
-    let expenseAccount
-    req.body.subType == "FCL"?expenseAccount = await Child_Account.findOne({where:{title:"FCL FREIGHT EXPENSE"}, include:[{model:Parent_Account, where:{CompanyId:invoices.dataValues.companyId}}]}):
-    req.body.subType == "LCL"?expenseAccount = await Child_Account.findOne({where:{title:"LCL FREIGHT EXPENSE"}, include:[{model:Parent_Account, where:{CompanyId:invoices.dataValues.companyId}}]}):
-    expenseAccount = await Child_Account.findOne({where:{title:"AIR FREIGHT EXPENSE"}, include:[{model:Parent_Account, where:{CompanyId:invoices.dataValues.companyId}}]})
-    let incomeAccount
-    req.body.subType == "FCL"?incomeAccount = await Child_Account.findOne({where:{title:"FCL FREIGHT INCOME"}, include:[{model:Parent_Account, where:{CompanyId:invoices.dataValues.companyId}}]}):
-    req.body.subType == "LCL"?incomeAccount = await Child_Account.findOne({where:{title:"LCL FREIGHT INCOME"}, include:[{model:Parent_Account, where:{CompanyId:invoices.dataValues.companyId}}]}):
-    incomeAccount = await Child_Account.findOne({where:{title:"AIR FREIGHT INCOME"}, include:[{model:Parent_Account, where:{CompanyId:invoices.dataValues.companyId}}]})
+    // let expenseAccount
+    // req.body.subType == "FCL"?expenseAccount = await Child_Account.findOne({where:{title:"FCL FREIGHT EXPENSE"}, include:[{model:Parent_Account, where:{CompanyId:invoices.dataValues.companyId}}]}):
+    // req.body.subType == "LCL"?expenseAccount = await Child_Account.findOne({where:{title:"LCL FREIGHT EXPENSE"}, include:[{model:Parent_Account, where:{CompanyId:invoices.dataValues.companyId}}]}):
+    // expenseAccount = await Child_Account.findOne({where:{title:"AIR FREIGHT EXPENSE"}, include:[{model:Parent_Account, where:{CompanyId:invoices.dataValues.companyId}}]})
+    // let incomeAccount
+    // req.body.subType == "FCL"?incomeAccount = await Child_Account.findOne({where:{title:"FCL FREIGHT INCOME"}, include:[{model:Parent_Account, where:{CompanyId:invoices.dataValues.companyId}}]}):
+    // req.body.subType == "LCL"?incomeAccount = await Child_Account.findOne({where:{title:"LCL FREIGHT INCOME"}, include:[{model:Parent_Account, where:{CompanyId:invoices.dataValues.companyId}}]}):
+    // incomeAccount = await Child_Account.findOne({where:{title:"AIR FREIGHT INCOME"}, include:[{model:Parent_Account, where:{CompanyId:invoices.dataValues.companyId}}]})
     let account
-    console.log(invoices.dataValues.partyType)
+    // console.log(invoices.dataValues.partyType)
     if(invoices.dataValues.partyType == "vendor"||invoices.dataValues.partyType == "agent"){
       account = await Vendor_Associations.findOne({where:{VendorId:invoices.dataValues.party_Id}})
     }else{
       account = await Client_Associations.findOne({where:{ClientId:invoices.dataValues.party_Id}})
     }
-    console.log(account.dataValues)
+    // console.log(account.dataValues)
     let Voucher_Head = []
-    let narration = `${invoices.dataValues.payType} Against Opening Invoices ${invoices.dataValues.invoice_No} From ${invoices.dataValues.party_Name}`
+    let narration = `${req.body.type=="OI"?"Opening Invoice":"Opening Bill"} ${invoices.dataValues.invoice_No} From ${invoices.dataValues.party_Name}`
 
     let total = parseFloat(invoices.dataValues.total) + parseFloat(invoices.dataValues.roundOff)
     let defaultTotal = invoices.dataValues.currency!='PKR'?parseFloat(invoices.dataValues.total)*parseFloat(invoices.dataValues.ex_rate):parseFloat(invoices.dataValues.total)
-    if(invoices.dataValues.roundOff=="0"){  
-      Voucher_Head.push({
-        amount:total,
-        defaultAmount: defaultTotal,
-        type:invoices.dataValues.payType=="Recievable"?"debit":"credit",
-        narration:narration,
-        VoucherId:voucher.dataValues.id,
-        ChildAccountId:account.dataValues.ChildAccountId,
-      })
-      Voucher_Head.push({
-        amount:total,
-        defaultAmount: defaultTotal,
-        type:invoices.dataValues.payType=="Recievable"?"credit":"debit",
-        narration:narration,
-        VoucherId:voucher.dataValues.id,
-        ChildAccountId:invoices.dataValues.payType=="Recievable"?incomeAccount.dataValues.id:expenseAccount.dataValues.id,
-      })
-    } else if(parseFloat(invoices.dataValues.roundOff)>"0"  && invoices.dataValues.payType=="Recievable"){
     Voucher_Head.push({
-        amount:amount + parseFloat(invoices.dataValues.roundOff),
-        defaultAmount: defaultTotal,
-        type:invoices.dataValues.payType=="Recievable"?"debit":"credit",
-        narration:narration,
-        VoucherId:voucher.dataValues.id,
-        ChildAccountId:account.dataValues.ChildAccountId,
-      })
-      Voucher_Head.push({
-        amount:amount + parseFloat(invoices.dataValues.roundOff),
-        defaultAmount: defaultTotal,
-        type:"credit",
-        narration:narration,
-        VoucherId:voucher.dataValues.id,
-        ChildAccountId:incomeAccount.dataValues.id
-      })
-    } else if(parseFloat(invoices.dataValues.roundOff)<"0"  && invoices.dataValues.payType=="Recievable"){
-      Voucher_Head.push({
-        amount:amount- parseFloat(invoices.dataValues.roundOff)*-1,
-        defaultAmount: defaultTotal,
-        type:invoices.dataValues.payType=="Recievable"?"debit":"credit",
-        narration:narration,
-        VoucherId:voucher.dataValues.id,
-        ChildAccountId:account.dataValues.id
-      })
-      Voucher_Head.push({
-        amount:amount,
-        type:"credit",
-        narration:narration,
-        VoucherId:voucher.dataValues.id,
-        ChildAccountId:incomeAccount.dataValues.id
-      })
-      Voucher_Head.push({
-        amount:parseFloat(invoices.dataValues.roundOff)*-1,
-        defaultAmount: defaultTotal,
-        type:invoices.dataValues.payType=="Recievable"?"debit":"credit",
-        narration:narration,
-        VoucherId:voucher.dataValues.id,
-        ChildAccountId:expenseAccount.dataValues.id
-      })
-    } else if(parseFloat(invoices.dataValues.roundOff) >0  && invoices.dataValues.payType!="Recievable"){
-      Voucher_Head.push({
-        amount:amount+ parseFloat(invoices.dataValues.roundOff),
-        defaultAmount: defaultTotal,
-        type:"credit",
-        narration:narration,
-        VoucherId:voucher.dataValues.id,
-        ChildAccountId:account.dataValues.ChildAccountId
-      })
-      Voucher_Head.push({
-        amount:amount + parseFloat(invoices.dataValues.roundOff),
-        defaultAmount: defaultTotal,
-        type:"debit",
-        narration:narration,
-        VoucherId:voucher.dataValues.id,
-        ChildAccountId:expenseAccount.dataValues.id
-      })
-    } else if(parseFloat(invoices.dataValues.roundOff) <0  && invoices.dataValues.payType!="Recievable"){
-      Voucher_Head.push({
-        amount:(amount - parseFloat(invoices.dataValues.roundOff)*-1).toFixed(2),
-        defaultAmount: defaultTotal,
-        type:"credit",
-        narration:narration,
-        VoucherId:voucher.dataValues.id,
-        ChildAccountId:account.dataValues.ChildAccountId
-      })
-      Voucher_Head.push({
-        amount:(amount).toFixed(2),
-        defaultAmount: defaultTotal,
-        type:"debit",
-        narration:narration,
-        VoucherId:voucher.dataValues.id,
-        ChildAccountId:expenseAccount.dataValues.id
-      })
-      Voucher_Head.push({
-        amount:(parseFloat(invoices.dataValues.roundOff)*-1).toFixed(2),
-        defaultAmount: defaultTotal,
-        type:"credit",
-        narration:narration,
-        VoucherId:voucher.dataValues.id,
-        ChildAccountId:incomeAccount.dataValues.id
-      })
-    }
+      amount:total,
+      defaultAmount: defaultTotal,
+      type:invoices.dataValues.payType=="Recievable"?"debit":"credit",
+      narration:narration,
+      VoucherId:voucher.dataValues.id,
+      accountType: "partyAccount",
+      ChildAccountId:account.dataValues.ChildAccountId,
+      createdAt: invoices.dataValues.createdAt
+    })
+    Voucher_Head.push({
+      amount:total,
+      defaultAmount: defaultTotal,
+      type:invoices.dataValues.payType!="Recievable"?"debit":"credit",
+      narration:narration,
+      VoucherId:voucher.dataValues.id,
+      accountType: "payAccount",
+      ChildAccountId:req.body.creditAccount,
+      createdAt: invoices.dataValues.createdAt
+    })
 
     await Voucher_Head.map(async(x)=>{
       await Voucher_Heads.create(x)
@@ -988,17 +911,29 @@ routes.get("/getOpeningInvoices", async(req, res) => {
 routes.get("/getOpeningInvoice", async(req, res) => {
   try{
     console.log(req.headers.id)
-    const result = await Invoice.findOne({
+    let result = await Invoice.findOne({
       where: {
         id: req.headers.id
       }
     })
-    const voucher = await Vouchers.findOne({
+    let voucher = await Vouchers.findOne({
       where:{
         invoice_Id:req.headers.id
       },
       include:[{model:Voucher_Heads}]
     })
+    console.log(result)
+    if(result == null){
+      voucher = await Vouchers.findOne({
+        where:{id: req.headers.id},
+        include:[{model:Voucher_Heads}]
+      })
+      if(voucher != null){
+        result = await Invoice.findOne({
+          where:{id:voucher.dataValues.invoice_Id}
+        })
+      }
+    }
     res.json({status: 'success', result: {result, voucher}});
   }catch(e){
     console.log(e)
