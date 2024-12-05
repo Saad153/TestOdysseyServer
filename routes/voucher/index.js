@@ -368,7 +368,7 @@ routes.get("/getAllJobPayRecVouchers", async (req, res) => {
       where: {
         CompanyId: req.headers.companyid,
         vType: {
-            [Op.notIn]: ["OP", "SI", "PI", ]
+            [Op.notIn]: ["OP", "SI", "PI", "OI", "OB" ]
         }
     },
     
@@ -409,7 +409,7 @@ routes.get("/getAllJobPayRecVouchers", async (req, res) => {
       invoices.forEach((y)=>{
         y.dataValues.receiving = 0.0;
         // console.log(y.dataValues.SE_Job?.jobNo)
-        if(x.dataValues.invoices.includes(y.dataValues.id)){
+        if(x.dataValues.invoices!=null && x.dataValues.invoices.includes(y.dataValues.id)){
           inv.push(y.dataValues)
         }
       })
