@@ -426,12 +426,12 @@ routes.get("/getAllJobPayRecVouchers", async (req, res) => {
 
 routes.get("/getVoucherById", async (req, res) => {
   try {
+    console.log(">>>",req.headers.id)
     const result = await Vouchers.findOne({
       where: { id: req.headers.id },
       include: [
         { 
           model: Voucher_Heads,
-          required: false,
           include:[{
             model:Child_Account,
             attributes:['title']
@@ -442,6 +442,7 @@ routes.get("/getVoucherById", async (req, res) => {
     console.log("Result>>>", result)
     await res.json({ status: "success", result: result });
   } catch (error) {
+    console.error(error)
     res.json({ status: "error", result: error });
   }
 });
@@ -655,8 +656,8 @@ routes.post("/makeTransaction", async(req, res) => {
         invoicesList += `${x.id},`
         if(i == 0){
           narration = `${narration}, Against`
-          narration = `${narration}, HBL# ${x.SE_Job?.Bl.hbl}`
-          narration = `${narration}, MBL# ${x.SE_Job?.Bl.mbl}`
+          x.SE_Job?.Bl?.hbl?narration = `${narration}, HBL# ${x.SE_Job?.Bl?.hbl}`:null
+          x.SE_Job?.Bl?.mbl?narration = `${narration}, MBL# ${x.SE_Job?.Bl?.mbl}`:null
         }
         narration = `${narration}, Invoice# ${x.invoice_No}`
         if(i == invoices.length-1){
@@ -783,5 +784,64 @@ routes.post("/makeTransaction", async(req, res) => {
     res.json({status:'error', result:error});
   }
 });
+
+routes.post("/createVoucher", async(req, res) => {
+  try{
+    console.log("Create Voucher>>", req.body)
+    let voucher_Heads = req.body.Voucher_Heads
+    const lastVoucher = await Vouchers.findOne({
+      where: {
+        vType: req.body.vType,
+        CompanyId: req.body.CompanyId,
+      },
+      order: [["voucher_No", "DESC"]],
+    })
+    if(lastVoucher==null){
+      req.body.voucher_No = 1
+      req.body.voucher_Id = `${req.body.CompanyId == 1 ? "SNS" : req.body.CompanyId == 2 ? "CLS" : "ACS"}-${req.body.vType}-${req.body.voucher_No}/${moment().month() >= 6 ? moment().add(1, 'year').format('YY') : moment().format('YY')}`
+    }else{
+      req.body.voucher_No = lastVoucher.voucher_No + 1
+      req.body.voucher_Id = `${req.body.CompanyId == 1 ? "SNS" : req.body.CompanyId == 2 ? "CLS" : "ACS"}-${req.body.vType}-${req.body.voucher_No}/${moment().month() >= 6 ? moment().add(1, 'year').format('YY') : moment().format('YY')}`
+    }
+    const result = await Vouchers.create(req.body)
+    for(let x of voucher_Heads){
+      x.VoucherId = result.id
+      await Voucher_Heads.create(x)
+    }
+    res.json({status:'success', result: result});
+  }catch(e){
+    console.log(e)
+    res.json({status:'error', result:e});
+  }
+})
+routes.post("/updateVoucher", async(req, res) => {
+  try{
+    console.log("Update Voucher>>", req.body)
+    let voucher_Heads = req.body.Voucher_Heads
+    // const lastVoucher = await Vouchers.findOne({
+    //   where: {
+    //     vType: req.body.vType,
+    //     CompanyId: req.body.CompanyId,
+    //   },
+    //   // order: [["voucher_No", "DESC"]],
+    // })
+    // if(lastVoucher==null){
+    //   req.body.voucher_No = 1
+    //   req.body.voucher_Id = `${req.body.CompanyId == 1 ? "SNS" : req.body.CompanyId == 2 ? "CLS" : "ACS"}-${req.body.vType}-${req.body.voucher_No}/${moment().month() >= 6 ? moment().add(1, 'year').format('YY') : moment().format('YY')}`
+    // }else{
+    //   req.body.voucher_No = lastVoucher.voucher_No + 1
+    //   req.body.voucher_Id = `${req.body.CompanyId == 1 ? "SNS" : req.body.CompanyId == 2 ? "CLS" : "ACS"}-${req.body.vType}-${req.body.voucher_No}/${moment().month() >= 6 ? moment().add(1, 'year').format('YY') : moment().format('YY')}`
+    // } 
+    const result = await Vouchers.upsert(req.body)
+    for(let x of voucher_Heads){
+      x.VoucherId = result.id
+      await Voucher_Heads.upsert(x)
+    }
+    res.json({status:'success', result: result});
+  }catch(e){
+    console.log(e)
+    res.json({status:'error', result:e});
+  }
+})
 
 module.exports = routes;
