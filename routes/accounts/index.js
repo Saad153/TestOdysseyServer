@@ -749,7 +749,7 @@ routes.get("/getLedger", async(req, res) => {
         },
 
       },
-      attributes:['amount', 'type', 'narration', 'createdAt', 'defaultAmount'],
+      attributes:['amount', 'type', 'narration', 'createdAt', 'defaultAmount', 'accountType'],
       include:[{
         model:Vouchers,
         attributes:['voucher_Id', 'id', 'type', 'currency', 'exRate', 'vType'],

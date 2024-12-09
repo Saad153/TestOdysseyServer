@@ -320,6 +320,7 @@ routes.get("/getAllInoivcesByPartyId", async(req, res) => {
       where:{
         approved:"1",
         party_Id:req.headers.id,
+        currency: req.headers.invoicecurrency,
         ...obj
       },
       include:[

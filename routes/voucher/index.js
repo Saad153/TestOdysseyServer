@@ -384,7 +384,6 @@ routes.get("/getAllJobPayRecVouchers", async (req, res) => {
         y!=''?invoice.push(y):null
       }):null
     })
-    console.log(invoice)
     const invoices = await Invoice.findAll({
       where: {
         // CompanyId: req.headers.companyid,
@@ -403,18 +402,15 @@ routes.get("/getAllJobPayRecVouchers", async (req, res) => {
         }
       ]
     })
-    console.log(invoices)
     result.forEach((x)=>{
       inv = []
       invoices.forEach((y)=>{
         y.dataValues.receiving = 0.0;
-        // console.log(y.dataValues.SE_Job?.jobNo)
         if(x.dataValues.invoices!=null && x.dataValues.invoices.includes(y.dataValues.id)){
           inv.push(y.dataValues)
         }
       })
       x.dataValues.invoice = inv
-      // console.log(">>", x.dataValues.invoice[1].dataValues.SE_Job.jobNo)
     })
     // result.dataValues.invoices = invoices
     await res.json({ status: "success", result: result });
@@ -598,6 +594,7 @@ routes.post("/makeTransaction", async(req, res) => {
     let invoices = req.body.invoices;
     let invoicesList = ""
     let narration  = ""
+    console.log("Req Body PayType>>>===", req.body.payType)
     if(req.body.payType=="Recievable"){
       narration = `Received ${req.body.subType}`
       narration = req.body.checkNo?narration+" "+req.body.checkNo:narration
@@ -736,6 +733,7 @@ routes.post("/makeTransaction", async(req, res) => {
       }else {
         amount = x.debit
       }
+      console.log("Narration>>>>", req.body.narration)
       if(x.accountName!="Total"){
         if(x.accountType=='partyAccount'){
           await Voucher_Heads.create(
@@ -746,21 +744,35 @@ routes.post("/makeTransaction", async(req, res) => {
               accountType: x.accountType,
               VoucherId: vID,
               ChildAccountId: account.ChildAccountId,
-              narration: narration
+              narration: req.body.narration==""?narration:req.body.narration
             }
           )
         }else{
-          await Voucher_Heads.create(
-            {
-              amount: amount,
-              defaultAmount: x.currency=="PKR"?amount:amount*req.body.exRate,
-              type: x.type,
-              accountType: x.accountType,
-              VoucherId: vID,
-              ChildAccountId: x.partyId,
-              narration: narration
-            }
-          )
+          if(x.partyId == req.body.partyId){
+            await Voucher_Heads.create(
+              {
+                amount: amount,
+                defaultAmount: x.currency=="PKR"?amount:amount*req.body.exRate,
+                type: x.type,
+                accountType: x.accountType,
+                VoucherId: vID,
+                ChildAccountId: account.ChildAccountId,
+                narration: req.body.narration==""?narration:req.body.narration
+              }
+            )
+          }else{
+            await Voucher_Heads.create(
+              {
+                amount: amount,
+                defaultAmount: x.currency=="PKR"?amount:amount*req.body.exRate,
+                type: x.type,
+                accountType: x.accountType,
+                VoucherId: vID,
+                ChildAccountId: x.partyId,
+                narration: req.body.narration==""?narration:req.body.narration
+              }
+            )
+          }
         }
     }
     }
