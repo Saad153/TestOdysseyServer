@@ -383,14 +383,16 @@ routes.get("/getAccountsForTransactionVouchers", async(req, res) => {
 
 routes.get("/getAllChilds", async(req, res) => {
   try {
+    console.log("req.headers.companyid",req.headers)
     const result = await Child_Account.findAll({
       attributes:["title", "id","code","subCategory"],
       include:[{
         model:Parent_Account,
-        where:{CompanyId:req.headers.companyid},
+        where:{CompanyId:1},  /// change this back to dynamic company id
         attributes:["title"]
       }]
     });
+    console.log("result",result[2])
     res.json({status:'success', result:result});
   }
   catch (error) {

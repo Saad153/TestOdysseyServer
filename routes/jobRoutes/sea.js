@@ -253,7 +253,8 @@ console.log('>>>>>>>>',req.body.data)
     const result = await SE_Job.create({
       ...data,
       jobId:check==null?1:parseInt(check.jobId)+1,
-      jobNo:`${data.companyId=="1"?"SNS":data.companyId=="2"?"CLS":"ACS"}-${data.operation}${data.operation=="SE"?"J":data.operation=="SI"?"J":""}-${check==null?1:parseInt(check.jobId)+1}/${moment().format("YY")}`
+      jobNo:`CL-${data.operation.slice(1)}-${moment().format("YY")}/${moment().format("M")}/${check==null?1:parseInt(check.jobId)+1}`
+      // jobNo:`${data.companyId=="1"?"CLS":data.companyId=="2"?"CLS":"ACS"}-${data.operation}${data.operation=="SE"?"J":data.operation=="SI"?"J":""}-${check==null?1:parseInt(check.jobId)+1}/${moment().format("YY")}`
     }).catch((x)=>console.log(x))
     console.log("result",result)
     const resultTwo = await SE_Equipments.bulkCreate(createEquip(data.equipments,  result.id)).catch((x)=>console.log(x,resultTwo))

@@ -1544,4 +1544,22 @@ routes.get("/getClientsWithACPayble", async (req, res) => {
   }
 });
 
+routes.get("/getClientInvoiceByJobId", async (req, res) => {
+  try {
+    console.log(req.headers.id)
+    const result = await Invoice.findAll({
+      attributes:['invoice_No','party_Name','total'],
+      include:[{
+        model:SE_Job,
+        attributes:['gd','jobNo','customerRef'],
+        where:{id:req.headers.id},
+      }],
+    })
+    res.json({ status: "success", result});
+  } catch (error) {
+    console.log(error)
+    res.json({ status: "error", result: error });
+  }
+});
+
 module.exports = routes;        
