@@ -976,7 +976,6 @@ routes.get("/getInvoices", async(req, res) =>{
 
 routes.post("/approve", async(req, res) => {
   try{
-    // console.log(req.body)
     const chargesHeads = await Charge_Head.findAll({
       where:{InvoiceId:req.body.id}
     })
@@ -985,13 +984,11 @@ routes.post("/approve", async(req, res) => {
     let defaultTotal = 0.0
     console.log(Inv.dataValues.currency)
     for(let x of chargesHeads){
-      console.log(x.dataValues)
-      Inv.dataValues.currency=="PKR"?total += parseFloat(x.dataValues.local_amount):total += parseFloat(x.dataValues.amount)  
+      Inv.dataValues.currency=="PKR"?total += parseFloat(x.dataValues.local_amount):total += parseFloat(x.dataValues.net_amount)  
       defaultTotal += parseFloat(x.dataValues.local_amount)
     }
     const invoice = await Invoice.findOne({where:{id:req.body.id}})
     const inv = await invoice.update({total:total, approved:1})
-    console.log("Invoice>>>", inv)
     await Charge_Head.update({approved:1, status:1}, {where:{InvoiceId:req.body.id}})
     const job = await SE_Job.findOne({where:{id:invoice.dataValues.SEJobId}})
     let expenseAccount
