@@ -595,15 +595,13 @@ routes.post("/makeTransaction", async(req, res) => {
     let invoicesList = ""
     let narration  = ""
     console.log("Req Body PayType>>>===", req.body.payType)
-    if(req.body.payType=="Recievable"){
+    if(req.body.totalReceiving>0){
       narration = `Received ${req.body.subType}`
-      narration = req.body.checkNo?narration+" "+req.body.checkNo:narration
-      narration = req.body.checkDate?narration+", Date: "+moment(req.body.checkDate).format('YYYY-MM-DD'):narration
     }else{
       narration = `Paid ${req.body.subType}`
-      narration = req.body.checkNo?narration+" "+req.body.checkNo:narration
-      narration = req.body.checkDate?narration+", Date: "+moment(req.body.checkDate).format('YYYY-MM-DD'):narration
     }
+    narration = req.body.checkNo?narration+" "+req.body.checkNo:narration
+    narration = req.body.checkDate?narration+", Date: "+moment(req.body.checkDate).format('YYYY-MM-DD'):narration
     let i = 0
     for(let x of invoices){
       if(x.receiving!=0){
