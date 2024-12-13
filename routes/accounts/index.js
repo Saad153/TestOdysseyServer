@@ -751,7 +751,7 @@ routes.get("/getLedger", async(req, res) => {
         },
 
       },
-      attributes:['amount', 'type', 'narration', 'createdAt', 'defaultAmount'],
+      attributes:['amount', 'type', 'narration', 'createdAt', 'defaultAmount', 'accountType'],
       include:[{
         model:Vouchers,
         attributes:['voucher_Id', 'id', 'type', 'currency', 'exRate', 'vType'],
@@ -838,7 +838,9 @@ routes.post("/createOpeningBalances", async(req, res) => {
         ...x,
         VoucherId: id,
         amount: `${x.amount}`,
-        createdAt:'2003-09-11 11:11:38.662+00',
+        createdAt:moment().month() < 3 
+        ? moment().subtract(1, 'year').startOf('year').month(5).endOf('month')
+        : moment().startOf('year').month(5).endOf('month'),
       });
     });
     return result;
@@ -852,6 +854,9 @@ routes.post("/createOpeningBalances", async(req, res) => {
     });
     const result = await Vouchers.create({
       ...req.body,
+      createdAt: moment().month() < 3 
+      ? moment().subtract(1, 'year').startOf('year').month(5).endOf('month')
+      : moment().startOf('year').month(5).endOf('month'),
       CompanyId:req.body.companyId,
       voucher_No: check == null ? 1 : parseInt(check.voucher_No) + 1,
       voucher_Id: `${
@@ -865,6 +870,7 @@ routes.post("/createOpeningBalances", async(req, res) => {
       }`,
     });
     let dataz = await setVoucherHeads(result.id, req.body.Voucher_Heads);
+    console.log(dataz)
     await Voucher_Heads.bulkCreate(dataz);
     res.json({status:'success', result});
   }
@@ -878,9 +884,20 @@ routes.get("/getOpeningBalances", async(req, res) => {
     const results = await Vouchers.findAll({
       where: {
         CompanyId: req.headers.id,
-        vType:"OP"
-      }
-    })
+        vType: "OP",
+      },
+      include: [
+        {
+          model: Voucher_Heads,
+          include: [
+            {
+              model: Child_Account,
+            },
+          ],
+        },
+      ],
+    });
+    
     res.json({status:'success', result:results});
   }
   catch (error) {

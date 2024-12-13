@@ -368,7 +368,7 @@ routes.get("/getAllJobPayRecVouchers", async (req, res) => {
       where: {
         CompanyId: req.headers.companyid,
         vType: {
-            [Op.notIn]: ["OP", "SI", "PI", ]
+            [Op.notIn]: ["OP", "SI", "PI", "OI", "OB" ]
         }
     },
     
@@ -384,7 +384,6 @@ routes.get("/getAllJobPayRecVouchers", async (req, res) => {
         y!=''?invoice.push(y):null
       }):null
     })
-    console.log(invoice)
     const invoices = await Invoice.findAll({
       where: {
         // CompanyId: req.headers.companyid,
@@ -403,18 +402,15 @@ routes.get("/getAllJobPayRecVouchers", async (req, res) => {
         }
       ]
     })
-    console.log(invoices)
     result.forEach((x)=>{
       inv = []
       invoices.forEach((y)=>{
         y.dataValues.receiving = 0.0;
-        // console.log(y.dataValues.SE_Job?.jobNo)
-        if(x.dataValues.invoices.includes(y.dataValues.id)){
+        if(x.dataValues.invoices!=null && x.dataValues.invoices.includes(y.dataValues.id)){
           inv.push(y.dataValues)
         }
       })
       x.dataValues.invoice = inv
-      // console.log(">>", x.dataValues.invoice[1].dataValues.SE_Job.jobNo)
     })
     // result.dataValues.invoices = invoices
     await res.json({ status: "success", result: result });
@@ -426,12 +422,12 @@ routes.get("/getAllJobPayRecVouchers", async (req, res) => {
 
 routes.get("/getVoucherById", async (req, res) => {
   try {
+    console.log(">>>",req.headers.id)
     const result = await Vouchers.findOne({
       where: { id: req.headers.id },
       include: [
         { 
           model: Voucher_Heads,
-          required: false,
           include:[{
             model:Child_Account,
             attributes:['title']
@@ -442,6 +438,7 @@ routes.get("/getVoucherById", async (req, res) => {
     console.log("Result>>>", result)
     await res.json({ status: "success", result: result });
   } catch (error) {
+    console.error(error)
     res.json({ status: "error", result: error });
   }
 });
@@ -597,15 +594,14 @@ routes.post("/makeTransaction", async(req, res) => {
     let invoices = req.body.invoices;
     let invoicesList = ""
     let narration  = ""
-    if(req.body.payType=="Recievable"){
+    console.log("Req Body PayType>>>===", req.body.payType)
+    if(req.body.totalReceiving>0){
       narration = `Received ${req.body.subType}`
-      narration = req.body.checkNo?narration+" "+req.body.checkNo:narration
-      narration = req.body.checkDate?narration+", Date: "+moment(req.body.checkDate).format('YYYY-MM-DD'):narration
     }else{
       narration = `Paid ${req.body.subType}`
-      narration = req.body.checkNo?narration+" "+req.body.checkNo:narration
-      narration = req.body.checkDate?narration+", Date: "+moment(req.body.checkDate).format('YYYY-MM-DD'):narration
     }
+    narration = req.body.checkNo?narration+" "+req.body.checkNo:narration
+    narration = req.body.checkDate?narration+", Date: "+moment(req.body.checkDate).format('YYYY-MM-DD'):narration
     let i = 0
     for(let x of invoices){
       if(x.receiving!=0){
@@ -655,8 +651,8 @@ routes.post("/makeTransaction", async(req, res) => {
         invoicesList += `${x.id},`
         if(i == 0){
           narration = `${narration}, Against`
-          narration = `${narration}, HBL# ${x.SE_Job?.Bl.hbl}`
-          narration = `${narration}, MBL# ${x.SE_Job?.Bl.mbl}`
+          x.SE_Job?.Bl?.hbl?narration = `${narration}, HBL# ${x.SE_Job?.Bl?.hbl}`:null
+          x.SE_Job?.Bl?.mbl?narration = `${narration}, MBL# ${x.SE_Job?.Bl?.mbl}`:null
         }
         narration = `${narration}, Invoice# ${x.invoice_No}`
         if(i == invoices.length-1){
@@ -735,6 +731,7 @@ routes.post("/makeTransaction", async(req, res) => {
       }else {
         amount = x.debit
       }
+      console.log("Narration>>>>", req.body.narration)
       if(x.accountName!="Total"){
         if(x.accountType=='partyAccount'){
           await Voucher_Heads.create(
@@ -745,21 +742,35 @@ routes.post("/makeTransaction", async(req, res) => {
               accountType: x.accountType,
               VoucherId: vID,
               ChildAccountId: account.ChildAccountId,
-              narration: narration
+              narration: req.body.narration==""?narration:req.body.narration
             }
           )
         }else{
-          await Voucher_Heads.create(
-            {
-              amount: amount,
-              defaultAmount: x.currency=="PKR"?amount:amount*req.body.exRate,
-              type: x.type,
-              accountType: x.accountType,
-              VoucherId: vID,
-              ChildAccountId: x.partyId,
-              narration: narration
-            }
-          )
+          if(x.partyId == req.body.partyId){
+            await Voucher_Heads.create(
+              {
+                amount: amount,
+                defaultAmount: x.currency=="PKR"?amount:amount*req.body.exRate,
+                type: x.type,
+                accountType: x.accountType,
+                VoucherId: vID,
+                ChildAccountId: account.ChildAccountId,
+                narration: req.body.narration==""?narration:req.body.narration
+              }
+            )
+          }else{
+            await Voucher_Heads.create(
+              {
+                amount: amount,
+                defaultAmount: x.currency=="PKR"?amount:amount*req.body.exRate,
+                type: x.type,
+                accountType: x.accountType,
+                VoucherId: vID,
+                ChildAccountId: x.partyId,
+                narration: req.body.narration==""?narration:req.body.narration
+              }
+            )
+          }
         }
     }
     }
@@ -783,5 +794,64 @@ routes.post("/makeTransaction", async(req, res) => {
     res.json({status:'error', result:error});
   }
 });
+
+routes.post("/createVoucher", async(req, res) => {
+  try{
+    console.log("Create Voucher>>", req.body)
+    let voucher_Heads = req.body.Voucher_Heads
+    const lastVoucher = await Vouchers.findOne({
+      where: {
+        vType: req.body.vType,
+        CompanyId: req.body.CompanyId,
+      },
+      order: [["voucher_No", "DESC"]],
+    })
+    if(lastVoucher==null){
+      req.body.voucher_No = 1
+      req.body.voucher_Id = `${req.body.CompanyId == 1 ? "SNS" : req.body.CompanyId == 2 ? "CLS" : "ACS"}-${req.body.vType}-${req.body.voucher_No}/${moment().month() >= 6 ? moment().add(1, 'year').format('YY') : moment().format('YY')}`
+    }else{
+      req.body.voucher_No = lastVoucher.voucher_No + 1
+      req.body.voucher_Id = `${req.body.CompanyId == 1 ? "SNS" : req.body.CompanyId == 2 ? "CLS" : "ACS"}-${req.body.vType}-${req.body.voucher_No}/${moment().month() >= 6 ? moment().add(1, 'year').format('YY') : moment().format('YY')}`
+    }
+    const result = await Vouchers.create(req.body)
+    for(let x of voucher_Heads){
+      x.VoucherId = result.id
+      await Voucher_Heads.create(x)
+    }
+    res.json({status:'success', result: result});
+  }catch(e){
+    console.log(e)
+    res.json({status:'error', result:e});
+  }
+})
+routes.post("/updateVoucher", async(req, res) => {
+  try{
+    console.log("Update Voucher>>", req.body)
+    let voucher_Heads = req.body.Voucher_Heads
+    // const lastVoucher = await Vouchers.findOne({
+    //   where: {
+    //     vType: req.body.vType,
+    //     CompanyId: req.body.CompanyId,
+    //   },
+    //   // order: [["voucher_No", "DESC"]],
+    // })
+    // if(lastVoucher==null){
+    //   req.body.voucher_No = 1
+    //   req.body.voucher_Id = `${req.body.CompanyId == 1 ? "SNS" : req.body.CompanyId == 2 ? "CLS" : "ACS"}-${req.body.vType}-${req.body.voucher_No}/${moment().month() >= 6 ? moment().add(1, 'year').format('YY') : moment().format('YY')}`
+    // }else{
+    //   req.body.voucher_No = lastVoucher.voucher_No + 1
+    //   req.body.voucher_Id = `${req.body.CompanyId == 1 ? "SNS" : req.body.CompanyId == 2 ? "CLS" : "ACS"}-${req.body.vType}-${req.body.voucher_No}/${moment().month() >= 6 ? moment().add(1, 'year').format('YY') : moment().format('YY')}`
+    // } 
+    const result = await Vouchers.upsert(req.body)
+    for(let x of voucher_Heads){
+      x.VoucherId = result.id
+      await Voucher_Heads.upsert(x)
+    }
+    res.json({status:'success', result: result});
+  }catch(e){
+    console.log(e)
+    res.json({status:'error', result:e});
+  }
+})
 
 module.exports = routes;

@@ -320,6 +320,7 @@ routes.get("/getAllInoivcesByPartyId", async(req, res) => {
       where:{
         approved:"1",
         party_Id:req.headers.id,
+        currency: req.headers.invoicecurrency,
         ...obj
       },
       include:[
@@ -741,6 +742,7 @@ routes.post("/makeInvoiceNew", async(req, res) => {
         charges.push({...x, status:"1", invoice_id:createdInvoice.invoice_No })
       }
     });
+    console.log("Created Invoice",createdInvoice)
     const newInv = await Invoice.create(createdInvoice);
     console.log(newInv)
     // const newCharges = await charges.map((x)=>{
@@ -945,8 +947,8 @@ routes.post("/deleteOpeningInvoices", async(req, res) => {
   try{
     await Invoice.destroy({where:{id:req.body.headers.id}})
     const voucher = await Vouchers.findOne({where:{invoice_Id:req.body.headers.id}})
-    await Vouchers.destroy({where:{invoice_Id:req.boheadersdy.id}})
     await Voucher_Heads.destroy({where:{VoucherId:voucher.dataValues.id}})
+    await Vouchers.destroy({where:{invoice_Id:req.body.headers.id}})
     res.json({status: 'success', result: req.body.headers.id});
   }catch(e){
     console.log(e)
@@ -974,7 +976,6 @@ routes.get("/getInvoices", async(req, res) =>{
 
 routes.post("/approve", async(req, res) => {
   try{
-    console.log(req.body)
     const chargesHeads = await Charge_Head.findAll({
       where:{InvoiceId:req.body.id}
     })
@@ -983,12 +984,11 @@ routes.post("/approve", async(req, res) => {
     let defaultTotal = 0.0
     console.log(Inv.dataValues.currency)
     for(let x of chargesHeads){
-      console.log(x.dataValues)
-      Inv.dataValues.currency=="PKR"?total += parseFloat(x.dataValues.local_amount):total += parseFloat(x.dataValues.amount)  
+      Inv.dataValues.currency=="PKR"?total += parseFloat(x.dataValues.local_amount):total += parseFloat(x.dataValues.net_amount)  
       defaultTotal += parseFloat(x.dataValues.local_amount)
     }
     const invoice = await Invoice.findOne({where:{id:req.body.id}})
-    await invoice.update({total:total, approved:1})
+    const inv = await invoice.update({total:total, approved:1})
     await Charge_Head.update({approved:1, status:1}, {where:{InvoiceId:req.body.id}})
     const job = await SE_Job.findOne({where:{id:invoice.dataValues.SEJobId}})
     let expenseAccount
