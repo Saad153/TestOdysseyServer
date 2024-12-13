@@ -381,6 +381,7 @@ routes.get("/getSEJobById", async(req, res) => {
         ],
         order:[["createdAt", "DESC"]],
       });
+      console.log('result',result)
       res.json({status:'success', result:result});
     }
     catch (error) {

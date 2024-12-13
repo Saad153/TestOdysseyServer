@@ -200,7 +200,7 @@ routes.get("/getInvoiceByNo", async(req, res) => {
             attributes:[
               'jobNo', 'jobDate', 'shipDate', 'pol', 'pod', 'fd', 'vol', 
               'weight', 'pcs', 'flightNo', 'cwtClient', 'cwtLine', 'eta',
-              'etd', 'arrivalDate', 'departureDate'
+              'etd', 'arrivalDate', 'departureDate', 'customerRef','gd','terminal'
             ],
             //attributes:['id'],
             include:[
@@ -246,7 +246,7 @@ routes.get("/getInvoiceById", async(req, res) => {
           {
             model:SE_Job,
             attributes:[
-              'jobNo', 'jobDate', 'shipDate', 'pol', 'pod', 'fd', 'vol', 'weight', 'pcs', 'flightNo', 'cwtClient', 'cwtLine', 'departureDate'
+              'jobNo', 'jobDate', 'shipDate', 'pol', 'pod', 'fd', 'vol', 'weight', 'pcs', 'flightNo', 'cwtClient', 'cwtLine', 'departureDate','customerRef'
             ],
             //attributes:['id'],
             include:[
@@ -271,6 +271,7 @@ routes.get("/getInvoiceById", async(req, res) => {
           [{ model: Charge_Head }, 'id', 'ASC'],
         ]
       })
+      console.log('resultOne',resultOne)
       res.json({status:'success', result:{ resultOne }});
     }
     catch (error) {
