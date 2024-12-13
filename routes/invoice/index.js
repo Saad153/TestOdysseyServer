@@ -750,7 +750,7 @@ routes.post("/makeInvoiceNew", async(req, res) => {
     // })
     let chargesIds = []
     for(let x of charges){
-      let chargeHeads = await Charge_Head.upsert({ ...x, InvoiceId:newInv.id });
+      let chargeHeads = await Charge_Head.upsert({ ...x, InvoiceId:newInv.id, invoice_id: newInv.invoice_No });
       chargesIds.push(chargeHeads[0].dataValues.id)
     }
     await res.json({status: 'success', result: {chargesIds, newInv}});
@@ -982,13 +982,56 @@ routes.post("/approve", async(req, res) => {
     const Inv = await Invoice.findOne({where:{id:req.body.id}})
     let total = 0.0;
     let defaultTotal = 0.0
-    console.log(Inv.dataValues.currency)
-    for(let x of chargesHeads){
-      Inv.dataValues.currency=="PKR"?total += parseFloat(x.dataValues.local_amount):total += parseFloat(x.dataValues.net_amount)  
-      defaultTotal += parseFloat(x.dataValues.local_amount)
+    console.log("Charge Heads:", chargesHeads)
+    let payble = false
+    let receivable = false
+    let vendor = false
+    let payAmount = 0.0
+    let recAmount = 0.0
+    let defaultPayAmount = 0.0
+    let defaultRecAmount = 0.0
+    chargesHeads.forEach((x)=>{
+      if(x.type!="Recievable"){
+        payble = true
+        payAmount += parseFloat(x.net_amount)
+        defaultPayAmount += parseFloat(x.local_amount)
+      }else{
+        receivable = true
+        recAmount += parseFloat(x.net_amount)
+        defaultRecAmount += parseFloat(x.local_amount)
+      }
+      if(x.partyType=='vendor'){
+        vendor = true
+      }
+    })
+    
+    // for(let x of chargesHeads){
+    //   Inv.dataValues.currency=="PKR"?total += parseFloat(x.dataValues.local_amount):total += parseFloat(x.dataValues.net_amount)
+    //   defaultTotal += parseFloat(x.dataValues.local_amount)
+    // }
+    let invPayType = Inv.dataValues.payType
+    if(payble && receivable){
+      if(payAmount>recAmount){
+        Inv.dataValues.currency!="PKR"?
+        total = payAmount - recAmount:
+        total = defaultPayAmount - defaultRecAmount
+        defaultTotal = defaultPayAmount - defaultRecAmount
+        invPayType = "Payble"
+      }else{
+        Inv.dataValues.currency!="PKR"?
+        total = recAmount - payAmount:
+        total = defaultRecAmount - defaultPayAmount
+        defaultTotal = defaultRecAmount - defaultPayAmount
+        invPayType = "Receivable"
+      }
+    }else{
+      for(let x of chargesHeads){
+        Inv.dataValues.currency=="PKR"?total += parseFloat(x.dataValues.local_amount):total += parseFloat(x.dataValues.net_amount)
+        defaultTotal += parseFloat(x.dataValues.local_amount)
+      }
     }
     const invoice = await Invoice.findOne({where:{id:req.body.id}})
-    const inv = await invoice.update({total:total, approved:1})
+    const inv = await invoice.update({total:total, approved:1, payType: invPayType})
     await Charge_Head.update({approved:1, status:1}, {where:{InvoiceId:req.body.id}})
     const job = await SE_Job.findOne({where:{id:invoice.dataValues.SEJobId}})
     let expenseAccount
