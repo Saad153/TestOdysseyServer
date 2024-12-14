@@ -740,6 +740,7 @@ routes.post("/makeTransaction", async(req, res) => {
       }
       // console.log("Narration>>>>", req.body.narration)
       if(x.accountName!="Total"){
+        console.log(x.accountType, x)
         if(x.accountType=='partyAccount'){
           await Voucher_Heads.create(
             {

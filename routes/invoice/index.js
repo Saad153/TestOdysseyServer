@@ -369,7 +369,7 @@ routes.get("/getAllOldInoivcesByPartyId", async(req, res) => {
     });
     let partyAccount = null;
     if(result.length>0){
-      if(req.headers.party=="vendor"){
+      if(req.headers.party=="vendor"||req.headers.party=="agent"){
         partyAccount = await Vendor_Associations.findAll({
           where:{
             VendorId:result[0].party_Id,
@@ -677,7 +677,7 @@ routes.get("/getAllInvoiceData", async(req, res) => {
     let heads = []
     for(let x of vouchers){
       let party
-      if(req.headers.party_type != "vendor"){
+      if(req.headers.party_type != "vendor" && req.headers.party_type != "agent"){
         party = await Client_Associations.findOne({
           where:{ClientId:req.headers.party_id}
         })
@@ -835,13 +835,13 @@ routes.post("/openingInvoice", async(req, res) => {
     // req.body.subType == "LCL"?incomeAccount = await Child_Account.findOne({where:{title:"LCL FREIGHT INCOME"}, include:[{model:Parent_Account, where:{CompanyId:invoices.dataValues.companyId}}]}):
     // incomeAccount = await Child_Account.findOne({where:{title:"AIR FREIGHT INCOME"}, include:[{model:Parent_Account, where:{CompanyId:invoices.dataValues.companyId}}]})
     let account
-    // console.log(invoices.dataValues.partyType)
+    console.log(invoices.dataValues.partyType)
     if(invoices.dataValues.partyType == "vendor"||invoices.dataValues.partyType == "agent"){
       account = await Vendor_Associations.findOne({where:{VendorId:invoices.dataValues.party_Id}})
     }else{
       account = await Client_Associations.findOne({where:{ClientId:invoices.dataValues.party_Id}})
     }
-    // console.log(account.dataValues)
+    console.log("Account Id:", account.dataValues)
     let Voucher_Head = []
     let narration = `${req.body.type=="OI"?"Opening Invoice":"Opening Bill"} ${invoices.dataValues.invoice_No} From ${invoices.dataValues.party_Name}`
 
@@ -1000,7 +1000,7 @@ routes.post("/approve", async(req, res) => {
         recAmount += parseFloat(x.net_amount)
         defaultRecAmount += parseFloat(x.local_amount)
       }
-      if(x.partyType=='vendor'){
+      if(x.partyType=='vendor' || x.partyType=='agent'){
         vendor = true
       }
     })
@@ -1022,7 +1022,7 @@ routes.post("/approve", async(req, res) => {
         total = recAmount - payAmount:
         total = defaultRecAmount - defaultPayAmount
         defaultTotal = defaultRecAmount - defaultPayAmount
-        invPayType = "Receivable"
+        invPayType = "Recievable"
       }
     }else{
       for(let x of chargesHeads){
@@ -1043,7 +1043,7 @@ routes.post("/approve", async(req, res) => {
     job.dataValues.subType == "LCL"?incomeAccount = await Child_Account.findOne({where:{title:"LCL FREIGHT INCOME"}, include:[{model:Parent_Account, where:{CompanyId:invoice.dataValues.companyId}}]}):
     incomeAccount = await Child_Account.findOne({where:{title:"AIR FREIGHT INCOME"}, include:[{model:Parent_Account, where:{CompanyId:invoice.dataValues.companyId}}]})
     let account
-    if(invoice.dataValues.partyType == "vendor"){
+    if(invoice.dataValues.partyType == "vendor"||invoice.dataValues.partyType == "agent"){
       account = await Vendor_Associations.findOne({where:{VendorId:invoice.dataValues.party_Id}})
     }else{
       account = await Client_Associations.findOne({where:{ClientId:invoice.dataValues.party_Id}})
@@ -1090,7 +1090,7 @@ routes.post("/approve", async(req, res) => {
       type:invoice.dataValues.payType=="Recievable"?"debit":"credit",
       narration:narration,
       VoucherId:voucher.dataValues.id,
-      ChildAccountId:account.dataValues.ChildAccountId,
+      ChildAccountId:account?.dataValues?.ChildAccountId,
     })
     Voucher_Head.push({
       amount:total,
