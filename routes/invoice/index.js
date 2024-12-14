@@ -326,7 +326,7 @@ routes.get("/getAllInoivcesByPartyId", async(req, res) => {
       include:[
         {
           model:SE_Job,
-          attributes:['jobNo', 'subType'],
+          // attributes:['jobNo', 'subType', 'id', 'operation'],
           include:[
             { model:SE_Equipments, attributes:['qty', 'size'] },
             { model:Bl, required: false, attributes:['mbl', 'hbl'] },
