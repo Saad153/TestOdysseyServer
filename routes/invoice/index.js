@@ -189,7 +189,7 @@ routes.get("/getInvoiceByNo", async(req, res) => {
   try {
       const attr = [
         'name', 'address1', 'address1', 'person1', 'mobile1',
-        'person2', 'mobile2', 'telephone1', 'telephone2', 'infoMail'
+        'person2', 'mobile2', 'telephone1', 'telephone2', 'infoMail','ntn'
       ];
       const resultOne = await Invoice.findOne({
         where:{invoice_No:req.headers.invoiceno.toUpperCase()},
@@ -200,7 +200,7 @@ routes.get("/getInvoiceByNo", async(req, res) => {
             attributes:[
               'jobNo', 'jobDate', 'shipDate', 'pol', 'pod', 'fd', 'vol', 
               'weight', 'pcs', 'flightNo', 'cwtClient', 'cwtLine', 'eta',
-              'etd', 'arrivalDate', 'departureDate', 'customerRef','gd','terminal'
+              'etd', 'arrivalDate', 'departureDate', 'customerRef','gd','terminal','fileNo'
             ],
             //attributes:['id'],
             include:[
