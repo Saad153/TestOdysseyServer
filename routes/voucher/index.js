@@ -394,7 +394,7 @@ routes.get("/getAllJobPayRecVouchers", async (req, res) => {
       include:[
         {
           model:SE_Job,
-          attributes:['jobNo', 'subType'],
+          // attributes:['jobNo', 'subType'],
           include:[
             { model:SE_Equipments, attributes:['qty', 'size'] },
             { model:Bl, required: false, attributes:['mbl', 'hbl'] },
@@ -591,10 +591,11 @@ routes.post("/deletePaymentReceipt", async(req, res) => {
 
 routes.post("/makeTransaction", async(req, res) => {
   try {
+    console.log(req.body.invoices)
     let invoices = req.body.invoices;
     let invoicesList = ""
     let narration  = ""
-    console.log("Req Body PayType>>>===", req.body.payType)
+    // console.log("Req Body PayType>>>===", req.body.payType)
     if(req.body.totalReceiving>0){
       narration = `Received ${req.body.subType}`
     }else{
@@ -605,7 +606,7 @@ routes.post("/makeTransaction", async(req, res) => {
     let i = 0
     for(let x of invoices){
       if(x.receiving!=0){
-        console.log("State Edit>>>", !req.body.edit)
+        // console.log("State Edit>>>", !req.body.edit)
         if(!req.body.edit){
           if(x.payType=="Recievable"){
             const updateInvoice = await Invoice.update(
@@ -627,7 +628,7 @@ routes.post("/makeTransaction", async(req, res) => {
 
           }
         }else{
-          console.log(">>>>>>>>>> ",x.payType)
+          // console.log(">>>>>>>>>> ",x.payType)
           if(x.payType=="Recievable"){
             const updateInvoice = await Invoice.update(
               {
@@ -660,6 +661,9 @@ routes.post("/makeTransaction", async(req, res) => {
           narration = `${narration}, For ${x.party_Name}`
         }
       }
+      if(req.body.edit){
+        invoicesList += `${x.id},`
+      }
       i++
     }
     let vID = req.body.voucherId
@@ -682,22 +686,25 @@ routes.post("/makeTransaction", async(req, res) => {
         tranDate: req.body.tranDate,
         subType: req.body.subType,
         CompanyId: req.body.companyId,
+        voucherNarration: req.body.narration
       }
       const lastVoucher = await Vouchers.findOne({
         where: {
           vType: v.vType,
           CompanyId: v.CompanyId,
         },
-        // order: [["voucher_No", "DESC"]],
+        order: [["voucher_No", "DESC"]],
       })
+      // console.log("Last Voucher: ", lastVoucher)
       if(lastVoucher==null){
         v.voucher_No = 1
         v.voucher_Id = `${v.CompanyId == 1 ? "SNS" : v.CompanyId == 2 ? "CLS" : "ACS"}-${v.vType}-${v.voucher_No}/${moment().month() >= 6 ? moment().add(1, 'year').format('YY') : moment().format('YY')}`
       }else{
+        // console.log("VOUCHER NO", lastVoucher.voucher_No)
         v.voucher_No = lastVoucher.voucher_No + 1
         v.voucher_Id = `${v.CompanyId == 1 ? "SNS" : v.CompanyId == 2 ? "CLS" : "ACS"}-${v.vType}-${v.voucher_No}/${moment().month() >= 6 ? moment().add(1, 'year').format('YY') : moment().format('YY')}`
       }
-      console.log(v.voucher_No)
+      // console.log(v.voucher_No)
       vouchers = await Vouchers.create(
         v
       )
@@ -731,8 +738,9 @@ routes.post("/makeTransaction", async(req, res) => {
       }else {
         amount = x.debit
       }
-      console.log("Narration>>>>", req.body.narration)
+      // console.log("Narration>>>>", req.body.narration)
       if(x.accountName!="Total"){
+        console.log(x.accountType, x)
         if(x.accountType=='partyAccount'){
           await Voucher_Heads.create(
             {
@@ -775,8 +783,25 @@ routes.post("/makeTransaction", async(req, res) => {
     }
     }
     for(let x of invoices){
-      if(x.receiving!=0){
-        let a = await Invoice_Transactions.create(
+      if(!req.body.edit){
+        if(x.receiving!=0){
+          let a = await Invoice_Transactions.create(
+            {
+              gainLoss: req.body.gainLoss,
+              amount: req.body.totalReceiving,
+              InvoiceId: x.id,
+              VoucherId: vID
+              
+            }
+          )
+        }
+      }else{
+        let a = await Invoice_Transactions.destroy({
+          where: {
+            InvoiceId: x.id
+          }
+        })
+        let b = await Invoice_Transactions.create(
           {
             gainLoss: req.body.gainLoss,
             amount: req.body.totalReceiving,
