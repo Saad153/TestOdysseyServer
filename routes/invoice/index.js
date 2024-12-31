@@ -1347,9 +1347,9 @@ routes.get("/invoiceBalancing", async (req, res) => {
       // status:{ [Op.ne]: null },
       [Op.and]: [
         { type: { [Op.ne]: "Job Invoice" } },
-        // { type: { [Op.ne]: "Old Job Invoice" } },
+        { type: { [Op.ne]: "Old Job Invoice" } },
         { type: { [Op.ne]: "Job Bill" } },
-        // { type: { [Op.ne]: "Old Job Bill" } },
+        { type: { [Op.ne]: "Old Job Bill" } },
       ]
     };
     if(req.headers.paytype!="All"){
@@ -1365,7 +1365,6 @@ routes.get("/invoiceBalancing", async (req, res) => {
     }
     // req.headers.currency?invoiceObj.currency=req.headers.currency:null;
     // req.headers.jobtypes?.length>0?invoiceObj.operation=req.headers.jobtypes.split(","):null;
-    
     (req.headers.overseasagent!=''&&req.headers.overseasagent!=null)?invoiceObj.party_Id=req.headers.overseasagent:null;
     const result = await Invoice.findAll({
       where:invoiceObj,

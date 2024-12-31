@@ -104,22 +104,45 @@ routes.get("/OfficeAllVouchers", async (req, res) => {
   }
 });
 
-routes.get("/getAllVoucehrHeads", async (req, res) => {
-  try{
-    const result = await Voucher_Heads.findAll({
-      include: [
-        {
-          model: Vouchers,
-        },
-      ],
-    });
+// routes.get("/getAllVoucehrHeads", async (req, res) => {
+//   try{
+//     // const result = await Voucher_Heads.findAll({
+//     //   include: [
+//     //     {
+//     //       model: Vouchers,
+//     //     },
+//     //   ],
+//     // });
+
+//     const result = await Invoices.findAll()
     
-    res.json({ status: "success", result: result });
-  }catch (error) {
-    console.log(error)
-    res.json({ status: "error", result: error });
+//     res.json({ status: "success", result: result });
+//   }catch (error) {
+//     console.log(error)
+//     res.json({ status: "error", result: error });
+//   }
+// })
+
+routes.get("/getAllVoucehrHeads", async (req, res) => {
+  try {
+    console.log("Running API")
+    const invoices = await Invoices.findAll();
+
+    // Update each invoice with the modified invoice_No
+    for (const invoice of invoices) {
+      const modifiedInvoiceNo = invoice.invoice_No?.endsWith('-O') 
+        ? invoice.invoice_No.slice(0, -2) 
+        : invoice.invoice_No;
+      await invoice.update({ invoice_No: modifiedInvoiceNo });
+    }
+
+    res.json({ status: "success", message: "Invoice numbers updated successfully" });
+  } catch (error) {
+    console.error("Error updating invoice numbers:", error);
+    res.status(500).json({ status: "error", result: error.message });
   }
-})
+});
+
 
 routes.post("/voucherCreation", async (req, res) => {
   try {

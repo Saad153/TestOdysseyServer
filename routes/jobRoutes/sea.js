@@ -40,7 +40,7 @@ routes.get("/getValues", async(req, res) => {
         finalResult.notify.push({name:`${x.name} (${x.code})`, id:x.id, types:x.types})
       }
       if(x.types.includes('Shipping Line')){
-        console.log(x)
+        // console.log(x)
         finalResult.sLine.push({name:`${x.name} (${x.code})`, id:x.id, types:x.types})
       }
     })
@@ -166,6 +166,7 @@ routes.get("/getValues", async(req, res) => {
     });
   }
   catch (error) {
+    console.error(error)
     res.json({status:'error', result:error});
   }
 });
