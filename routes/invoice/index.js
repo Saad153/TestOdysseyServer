@@ -1586,4 +1586,14 @@ routes.get("/getClientsWithACPayble", async (req, res) => {
   }
 });
 
+routes.get("/invoiceMatching", async (req, res) => {
+  try {
+    const result = await Invoice.findAll({})
+    await res.json({ status: "success", result});
+  } catch (error) {
+    console.log(error)
+    res.json({ status: "error", result: error });
+  }
+});
+
 module.exports = routes;        
