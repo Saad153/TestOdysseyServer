@@ -321,6 +321,7 @@ routes.get("/getAllInoivcesByPartyId", async(req, res) => {
         approved:"1",
         party_Id:req.headers.id,
         currency: req.headers.invoicecurrency,
+        companyId: req.headers.companyid,
         ...obj
       },
       include:[
@@ -1473,27 +1474,65 @@ routes.post("/uploadbulkInvoices", async (req, res) => {
     let vouchers
     let invoiceNo = temp.invoice_No.slice(0, -2)
     try{
-
-      vouchers = await Vouchers.findAll({
+      const voucher = await Vouchers.findOne({
         where: {
           voucherNarration: {
             [Op.like]: `%${invoiceNo}%`
           }
         }
       });
+      
+      if (voucher) {
+        // Append the new result.id to the existing invoices string
+        const updatedInvoices = voucher.invoices ? `${voucher.invoices},${result.id}` : result.id;
+      
+        // Update the record with the new invoices string
+        await Vouchers.update(
+          {
+            invoices: updatedInvoices,
+          },
+          {
+            where: {
+              id: voucher.id, // Update only the specific record
+            }
+          }
+        );
+      } else {
+        console.log('No voucher found with the specified narration.');
+      }
+      // vouchers = await Vouchers.update({
+      //   where: {
+      //     voucherNarration: {
+      //       [Op.like]: `%${invoiceNo}%`
+      //     }
+      //   }
+      // });
 
     }catch(e){
       console.log("Voucher finder",e)
     }
-    let Invoice_Transaction = {} 
-    vouchers.forEach((x)=>{
+    let Invoice_Transaction = {}
+    for(let x of vouchers){
       if(x.voucherNarration.includes(invoiceNo)){
         Invoice_Transaction = {
           InvoiceId: result.dataValues.id,
           VoucherId: x.id
         }
+        await Voucher.update(
+          { invoices: result.dataValues.id }, // Fields to update
+          { where: { id: x.id } }// Condition
+        );
       }
-    })  
+    } 
+    // vouchers.forEach((x)=>{
+    //   if(x.voucherNarration.includes(invoiceNo)){
+    //     Invoice_Transaction = {
+    //       InvoiceId: result.dataValues.id,
+    //       VoucherId: x.id
+    //     }
+    //     await Invoice.update
+    //   }
+    // })  
     let resultThree
     try{
       resultThree = await Invoice_Transactions.create({
@@ -1511,6 +1550,52 @@ routes.post("/uploadbulkInvoices", async (req, res) => {
     res.json({ status: "error", result: error });
   }
 })
+
+routes.post("/updateVouchersWithInvoices", async (req, res) => {
+  try {
+    // Fetch all invoices
+    const allInvoices = await Invoice.findAll(); // Replace `Invoices` with your actual model name
+    console.log(allInvoices)
+    // Loop through each invoice
+    for (const invoice of allInvoices) {
+      // console.log(invoice)
+      const invoiceNo = invoice.dataValues.invoice_No; // Replace `invoiceNo` with the actual field name for the invoice number
+      const invoiceId = invoice.dataValues.id; // Replace `id` with the actual primary key field for the invoice
+
+      // Find the voucher(s) that match the invoice number in the narration
+      const vouchers = await Vouchers.findAll({
+        where: {
+          voucherNarration: {
+            [Op.like]: `%${invoiceNo}%`
+          }
+        }
+      });
+      // console.log(vouchers)
+      // Loop through each matching voucher and update the invoices field
+      for (const voucher of vouchers) {
+        // Append the invoice ID to the existing invoices string
+        const updatedInvoices = voucher.invoices ? `${voucher.invoices},${invoiceId}` : invoiceId;
+        console.log(updatedInvoices)
+        // Update the voucher with the new invoices string
+        await Vouchers.update(
+          {
+            invoices: updatedInvoices,
+          },
+          {
+            where: {
+              id: voucher.id, // Update only the specific voucher
+            }
+          }
+        );
+      }
+    }
+
+    res.json({ status: 'success', message: 'All vouchers updated with invoice IDs.' });
+  } catch (e) {
+    console.log(e);
+    res.status(500).json({ status: 'error', message: e.message });
+  }
+});
 
 // For Data Backup
 routes.post("/createBulkInvoices", async (req, res) => {

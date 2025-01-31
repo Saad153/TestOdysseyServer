@@ -14,7 +14,7 @@ Company.hasMany(Vouchers, {
 Vouchers.belongsTo(Company);
 
 Vouchers.hasMany(Voucher_Heads, {
-    foriegnKey:{
+    foreignKey:{
         type: DataTypes.UUID,
         allowNull:false
     }

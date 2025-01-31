@@ -614,7 +614,7 @@ routes.post("/deletePaymentReceipt", async(req, res) => {
 
 routes.post("/makeTransaction", async(req, res) => {
   try {
-    console.log(req.body.invoices)
+    console.log("Body: ", req.body)
     let invoices = req.body.invoices;
     let invoicesList = ""
     let narration  = ""
@@ -746,11 +746,11 @@ routes.post("/makeTransaction", async(req, res) => {
     let account
     if(req.body.partyType=='client'){
       account = await Client_Associations.findOne({
-        where: { ClientId: req.body.partyId }
+        where: { ClientId: req.body.partyId, CompanyId: req.body.companyId }
       })
     }else{
       account = await Vendor_Associations.findOne({
-        where: { VendorId: req.body.partyId }
+        where: { VendorId: req.body.partyId, CompanyId: req.body.companyId }
       })
     }
     
@@ -896,6 +896,54 @@ routes.post("/updateVoucher", async(req, res) => {
       await Voucher_Heads.upsert(x)
     }
     res.json({status:'success', result: result});
+  }catch(e){
+    console.log(e)
+    res.json({status:'error', result:e});
+  }
+})
+routes.get("/getExRateVouchers", async(req, res) => {
+  try{
+    // const Charges = await Voucher_Heads.update(
+    //   {
+    //     accountType: "Charges Account",
+    //   },
+    //   {
+    //     where: {
+    //       ChildAccountId: { [Op.or]: ['50143', '51988'] }
+    //     }
+    //   }
+    // );
+    // const GainLoss = await Voucher_Heads.update(
+    //   {
+    //     accountType: "Charges Account",
+    //   },
+    //   {
+    //     where: {
+    //       ChildAccountId: { [Op.or]: ['50143', '51988'] }
+    //     }
+    //   }
+    // );
+    const CV = await Voucher_Heads.update(
+      {
+        accountType: "partyAccount",
+      },
+      {
+        where: {
+          accountType: { [Op.or]: ['Customer', 'Vendor', 'Customer/Vendor'] }
+        }
+      }
+    );
+    const BC = await Voucher_Heads.update(
+      {
+        accountType: "payAccount",
+      },
+      {
+        where: {
+          accountType: { [Op.or]: ['Bank'] }
+        }
+      }
+    );
+    res.json({status:'success'});
   }catch(e){
     console.log(e)
     res.json({status:'error', result:e});
