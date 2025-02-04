@@ -19,11 +19,11 @@ routes.get(`/${url}/get`, async(req, res) => {
     if(req.headers.accountid){
       obj.id = req.headers.accountid
     }
-    const condition = req.headers.old=="true"
-      ? { type: "Opening Invoice" }  // If old is true
-      : { type: { [Op.ne]: "Opening Invoice" } };
+    const condition = req.headers.currency!="PKR"
+      ? { currency: req.headers.currency }  // If old is true
+      :null
     
-    console.log(req.headers.accountid)
+    console.log(req.headers.currency)
     const result = await Parent_Account.findAll({
       attributes:['id', 'title', 'code'],
       where:obj,
@@ -46,7 +46,8 @@ routes.get(`/${url}/get`, async(req, res) => {
             // required: false,
             attributes:['vType', 'type', 'exRate', 'currency'],
             where:{
-              // ...condition,
+              ...condition,
+              // currency: req.headers.currency,
               createdAt: {
                 [Op.gte]: moment(req.headers.from).toDate(),
                 [Op.lte]: moment(req.headers.to).add(1, 'days').toDate(),

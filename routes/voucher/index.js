@@ -25,15 +25,20 @@ const { Op, literal } = Sequelize;
 // Expenses Payment
 // Office_Vouchers
 
-const setVoucherHeads = (id, heads) => {
+const setVoucherHeads = (id, heads, curr) => {
   let result = [];
   heads.forEach((x) => {
+    console.log("X>",x)
     result.push({
       ...x,
       VoucherId: id,
-      amount: `${x.amount}`
+      amount: `${x.amount}`,
+      defaultAmount: curr=="PKR"?`${x.amount}`:'0',
+      // x.currency=="PKR"?defaultAmount: `${x.amount}`:defaultAmount: `0`,
+      // createdAt: "2024-06-30 19:44:20.592+05"
     });
   });
+  console.log("Result>",result)
   return result;
 };
 
@@ -146,6 +151,7 @@ routes.get("/getAllVoucehrHeads", async (req, res) => {
 
 routes.post("/voucherCreation", async (req, res) => {
   try {
+    console.log("Request Body:",req.body)
     const check = await Vouchers.findOne({
       order: [["voucher_No", "DESC"]],
       attributes: ["voucher_No"],
@@ -159,7 +165,7 @@ routes.post("/voucherCreation", async (req, res) => {
         }-${check == null ? 1 : parseInt(check.voucher_No) + 1
         }/${moment().month() >= 6 ? moment().add(1, 'year').format('YY') : moment().format('YY')}`:req.body.voucher_Id,
       }).catch();
-      let dataz = await setVoucherHeads(result.id, req.body.Voucher_Heads);
+      let dataz = await setVoucherHeads(result.id, req.body.Voucher_Heads, req.body.currency);
       const VH = await Voucher_Heads.bulkCreate(dataz);
       res.json({ status: "success", result: result });
   } catch (error) {
@@ -772,7 +778,7 @@ routes.post("/makeTransaction", async(req, res) => {
               type: x.type,
               accountType: x.accountType,
               VoucherId: vID,
-              ChildAccountId: account.ChildAccountId,
+              ChildAccountId: req.body.partyId,
               narration: req.body.narration==""?narration:req.body.narration
             }
           )
@@ -785,7 +791,7 @@ routes.post("/makeTransaction", async(req, res) => {
                 type: x.type,
                 accountType: x.accountType,
                 VoucherId: vID,
-                ChildAccountId: account.ChildAccountId,
+                ChildAccountId: req.body.partyId,
                 narration: req.body.narration==""?narration:req.body.narration
               }
             )
@@ -903,16 +909,16 @@ routes.post("/updateVoucher", async(req, res) => {
 })
 routes.get("/getExRateVouchers", async(req, res) => {
   try{
-    // const Charges = await Voucher_Heads.update(
-    //   {
-    //     accountType: "Charges Account",
-    //   },
-    //   {
-    //     where: {
-    //       ChildAccountId: { [Op.or]: ['50143', '51988'] }
-    //     }
-    //   }
-    // );
+    const Charges = await Voucher_Heads.update(
+      {
+        accountType: "Charges Account",
+      },
+      {
+        where: {
+          ChildAccountId: { [Op.or]: ['55690', '57542'] }
+        }
+      }
+    );
     // const GainLoss = await Voucher_Heads.update(
     //   {
     //     accountType: "Charges Account",
@@ -929,7 +935,7 @@ routes.get("/getExRateVouchers", async(req, res) => {
       },
       {
         where: {
-          accountType: { [Op.or]: ['Customer', 'Vendor', 'Customer/Vendor'] }
+          accountType: { [Op.or]: ['client', 'vendor', 'agent'] }
         }
       }
     );

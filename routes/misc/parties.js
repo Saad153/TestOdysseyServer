@@ -12,10 +12,11 @@ const moment = require("moment");
 
 routes.get(`/${url}/getPartiesbyType`, async (req, res) => {
   try{
-    console.log(req.body)
-    console.log(req.headers)
+    // console.log(req.body)
+    console.log("Type:",req.headers.type)
     let result
     if(req.headers.type == 'client'){
+      console.log("Client Ran")
       result = await Clients.findAll({
         attributes:['id', 'name', 'code'],
         include: {
@@ -26,6 +27,7 @@ routes.get(`/${url}/getPartiesbyType`, async (req, res) => {
         }
       })
     }else if(req.headers.type == 'vendor'){
+      console.log("Vendor Ran")
       result = await Vendors.findAll({
         attributes:['id', 'name', 'code'],
         include: {
@@ -39,6 +41,7 @@ routes.get(`/${url}/getPartiesbyType`, async (req, res) => {
         }
       })
     }else if(req.headers.type == 'agent'){
+      console.log("Agent Ran")
       result = await Vendors.findAll({
         attributes:['id', 'name', 'code'],
         include: {
@@ -52,7 +55,7 @@ routes.get(`/${url}/getPartiesbyType`, async (req, res) => {
         }
       })
     }
-    console.log(result.dataValues)
+    // console.log("Result Length: ",result.dataValues.length)
     res.json({status:'success', result:result});
   }catch(e){
     console.log(e)

@@ -316,10 +316,25 @@ routes.get("/getAllInoivcesByPartyId", async(req, res) => {
       };
 
     }
+    let account
+    if(req.headers.type == 'client'){
+      account = await Client_Associations.findOne({
+        where:{
+          ChildAccountId: req.headers.id
+        }
+      })
+    }else{
+      account = await Vendor_Associations.findOne({
+        where:{
+          ChildAccountId: req.headers.id
+        }
+      })
+    }
+    // console.log(account)
     const result = await Invoice.findAll({
       where:{
         approved:"1",
-        party_Id:req.headers.id,
+        party_Id:req.headers.type=="client"?account.ClientId:account.VendorId,
         currency: req.headers.invoicecurrency,
         companyId: req.headers.companyid,
         ...obj
@@ -335,7 +350,7 @@ routes.get("/getAllInoivcesByPartyId", async(req, res) => {
         }
       ]
     })
-    console.log("Result",result)
+    // console.log("Result",result)
     if(req.headers.edit==false){
     }
     res.json({status:'success', result:result});
@@ -1553,16 +1568,12 @@ routes.post("/uploadbulkInvoices", async (req, res) => {
 
 routes.post("/updateVouchersWithInvoices", async (req, res) => {
   try {
-    // Fetch all invoices
-    const allInvoices = await Invoice.findAll(); // Replace `Invoices` with your actual model name
+    const allInvoices = await Invoice.findAll();
     console.log(allInvoices)
-    // Loop through each invoice
     for (const invoice of allInvoices) {
-      // console.log(invoice)
-      const invoiceNo = invoice.dataValues.invoice_No; // Replace `invoiceNo` with the actual field name for the invoice number
-      const invoiceId = invoice.dataValues.id; // Replace `id` with the actual primary key field for the invoice
-
-      // Find the voucher(s) that match the invoice number in the narration
+      
+      const invoiceNo = invoice.dataValues.invoice_No;
+      const invoiceId = invoice.dataValues.id;
       const vouchers = await Vouchers.findAll({
         where: {
           voucherNarration: {
@@ -1570,20 +1581,16 @@ routes.post("/updateVouchersWithInvoices", async (req, res) => {
           }
         }
       });
-      // console.log(vouchers)
-      // Loop through each matching voucher and update the invoices field
       for (const voucher of vouchers) {
-        // Append the invoice ID to the existing invoices string
         const updatedInvoices = voucher.invoices ? `${voucher.invoices},${invoiceId}` : invoiceId;
         console.log(updatedInvoices)
-        // Update the voucher with the new invoices string
         await Vouchers.update(
           {
             invoices: updatedInvoices,
           },
           {
             where: {
-              id: voucher.id, // Update only the specific voucher
+              id: voucher.id,
             }
           }
         );
