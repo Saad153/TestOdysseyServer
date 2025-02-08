@@ -316,25 +316,25 @@ routes.get("/getAllInoivcesByPartyId", async(req, res) => {
       };
 
     }
-    let account
-    if(req.headers.type == 'client'){
-      account = await Client_Associations.findOne({
-        where:{
-          ChildAccountId: req.headers.id
-        }
-      })
-    }else{
-      account = await Vendor_Associations.findOne({
-        where:{
-          ChildAccountId: req.headers.id
-        }
-      })
-    }
+    // let account
+    // if(req.headers.type == 'client'){
+    //   account = await Client_Associations.findOne({
+    //     where:{
+    //       ChildAccountId: req.headers.id
+    //     }
+    //   })
+    // }else{
+    //   account = await Vendor_Associations.findOne({
+    //     where:{
+    //       ChildAccountId: req.headers.id
+    //     }
+    //   })
+    // }
     // console.log(account)
     const result = await Invoice.findAll({
       where:{
         approved:"1",
-        party_Id:req.headers.type=="client"?account.ClientId:account.VendorId,
+        party_Id:req.headers.id,
         currency: req.headers.invoicecurrency,
         companyId: req.headers.companyid,
         ...obj
@@ -645,31 +645,43 @@ routes.get("/getHeadesNew", async(req, res) => {
 });
 
 // This function is used in the API below helps to set invoice number according to the last generated invoice with fiscal year
-const createInvoices = (lastJB, init, type, companyId, operation, x) => {
-  let company = '';
-  let inVoiceDeleteList = []
-  if(lastJB?.Charge_Heads?.length==0){
-    inVoiceDeleteList.push(lastJB.id)
+const createInvoices = async (lastJB, init, type, companyId, operation, x) => {
+  try{
+    let company = '';
+    let inVoiceDeleteList = []
+    const account = await Client_Associations.findOne({
+      where:{
+        ClientId: x.partyId
+      }
+    })
+    // console.log("Account:",account)
+    if(lastJB?.Charge_Heads?.length==0){
+      inVoiceDeleteList.push(lastJB.id)
+    }
+    let addition = lastJB?.Charge_Heads?.length==0?0:1;
+    company = companyId=='1'?"SNS":companyId=='2'?"CLS":"ACS";
+    let result = {
+      invoice_No:(lastJB==null || lastJB.invoice_Id==null)?`${company}-${init}-${1}/${moment().add(1, 'years').format("YY")}`:`${company}-${init}-${parseInt(lastJB.invoice_Id)+parseInt(addition)}/${moment().add(1, 'years').format("YY")}`,
+      invoice_Id: (lastJB==null || lastJB.invoice_Id==null)?1: parseInt(lastJB.invoice_Id)+parseInt(addition),
+      type:type,
+      status: "1",
+      companyId:companyId,
+      operation:operation,
+      payType: x.type,
+      party_Id: account.dataValues.ChildAccountId,
+      party_Name: x.name,
+      SEJobId: x.SEJobId,
+      currency:(init=="JB"||init=="JI")?'PKR':x.currency,
+      ex_rate:x.ex_rate,
+      partyType:x.partyType,
+    }
+    // console.log("Result:",result)
+    Invoice.destroy({where:{id:inVoiceDeleteList}})
+    return result;
+  }catch(e){
+    console.error(e)
   }
-  let addition = lastJB?.Charge_Heads?.length==0?0:1;
-  company = companyId=='1'?"SNS":companyId=='2'?"CLS":"ACS";
-  let result = {
-    invoice_No:(lastJB==null || lastJB.invoice_Id==null)?`${company}-${init}-${1}/${moment().add(1, 'years').format("YY")}`:`${company}-${init}-${parseInt(lastJB.invoice_Id)+parseInt(addition)}/${moment().add(1, 'years').format("YY")}`,
-    invoice_Id: (lastJB==null || lastJB.invoice_Id==null)?1: parseInt(lastJB.invoice_Id)+parseInt(addition),
-    type:type,
-    status: "1",
-    companyId:companyId,
-    operation:operation,
-    payType: x.type,
-    party_Id: x.partyId,
-    party_Name: x.name,
-    SEJobId: x.SEJobId,
-    currency:(init=="JB"||init=="JI")?'PKR':x.currency,
-    ex_rate:x.ex_rate,
-    partyType:x.partyType,
-  }
-  Invoice.destroy({where:{id:inVoiceDeleteList}})
-  return result;
+  
 };
 
 routes.get("/getAllInvoiceData", async(req, res) => {
@@ -732,7 +744,7 @@ routes.post("/makeInvoiceNew", async(req, res) => {
     const lastAI = await Invoice.findOne({where:{type:'Agent Invoice'},order:[['invoice_Id', 'DESC']], attributes:["id","invoice_Id"], include:[{model:Charge_Head, attributes:['id']}]});
     const lastAB = await Invoice.findOne({where:{type:'Agent Bill'},   order:[['invoice_Id', 'DESC']], attributes:["id","invoice_Id"], include:[{model:Charge_Head, attributes:['id']}]});
 
-    await result.forEach(async(x)=>{
+    for(let x of result){
       if(x.invoiceType=="Job Bill"){
         if(Object.keys(createdInvoice).length==0){
           createdInvoice = await createInvoices(lastJB, "JB", "Job Bill", req.body.companyId, req.body.type, x)
@@ -757,10 +769,10 @@ routes.post("/makeInvoiceNew", async(req, res) => {
         }
         charges.push({...x, status:"1", invoice_id:createdInvoice.invoice_No })
       }
-    });
-    console.log("Created Invoice",createdInvoice)
+    };
+    // console.log("Created Invoice",createdInvoice)
     const newInv = await Invoice.create(createdInvoice);
-    console.log(newInv)
+    // console.log("Invoice Creation",newInv)
     // const newCharges = await charges.map((x)=>{
     //   return{ ...x, InvoiceId:newInv.id }
     // })
@@ -772,6 +784,7 @@ routes.post("/makeInvoiceNew", async(req, res) => {
     await res.json({status: 'success', result: {chargesIds, newInv}});
   }
   catch (error) {
+    console.log(error)
     res.json({status: 'error', result: error});
   }
 });
@@ -998,7 +1011,7 @@ routes.post("/approve", async(req, res) => {
     const Inv = await Invoice.findOne({where:{id:req.body.id}})
     let total = 0.0;
     let defaultTotal = 0.0
-    console.log("Charge Heads:", chargesHeads)
+    // console.log("Charge Heads:", chargesHeads)
     let payble = false
     let receivable = false
     let vendor = false
@@ -1047,6 +1060,7 @@ routes.post("/approve", async(req, res) => {
       }
     }
     const invoice = await Invoice.findOne({where:{id:req.body.id}})
+    // console.log("",invoice)
     const inv = await invoice.update({total:total, approved:1, payType: invPayType})
     await Charge_Head.update({approved:1, status:1}, {where:{InvoiceId:req.body.id}})
     const job = await SE_Job.findOne({where:{id:invoice.dataValues.SEJobId}})
@@ -1106,7 +1120,7 @@ routes.post("/approve", async(req, res) => {
       type:invoice.dataValues.payType=="Recievable"?"debit":"credit",
       narration:narration,
       VoucherId:voucher.dataValues.id,
-      ChildAccountId:account?.dataValues?.ChildAccountId,
+      ChildAccountId:invoice.dataValues.party_Id,
     })
     Voucher_Head.push({
       amount:total,
@@ -1123,7 +1137,7 @@ routes.post("/approve", async(req, res) => {
       type:invoice.dataValues.payType=="Recievable"?"debit":"credit",
       narration:narration,
       VoucherId:voucher.dataValues.id,
-      ChildAccountId:account.dataValues.ChildAccountId,
+      ChildAccountId:invoice.dataValues.party_Id,
     })
     Voucher_Head.push({
       amount:amount + parseFloat(invoice.dataValues.roundOff),
@@ -1140,7 +1154,7 @@ routes.post("/approve", async(req, res) => {
       type:invoice.dataValues.payType=="Recievable"?"debit":"credit",
       narration:narration,
       VoucherId:voucher.dataValues.id,
-      ChildAccountId:account.dataValues.id
+      ChildAccountId:invoice.dataValues.party_Id
     })
     Voucher_Head.push({
       amount:amount,
@@ -1164,7 +1178,7 @@ routes.post("/approve", async(req, res) => {
       type:"credit",
       narration:narration,
       VoucherId:voucher.dataValues.id,
-      ChildAccountId:account.dataValues.ChildAccountId
+      ChildAccountId:invoice.dataValues.party_Id
     })
     Voucher_Head.push({
       amount:amount + parseFloat(invoice.dataValues.roundOff),
@@ -1181,7 +1195,7 @@ routes.post("/approve", async(req, res) => {
       type:"credit",
       narration:narration,
       VoucherId:voucher.dataValues.id,
-      ChildAccountId:account.dataValues.ChildAccountId
+      ChildAccountId:invoice.dataValues.party_Id
     })
     Voucher_Head.push({
       amount:(amount).toFixed(2),
