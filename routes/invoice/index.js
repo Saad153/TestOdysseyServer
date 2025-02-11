@@ -1010,6 +1010,35 @@ routes.get("/getInvoices", async(req, res) =>{
   }
 });
 
+routes.post("/unApprove", async(req, res)=>{
+  try{
+    console.log(req.body.id)
+    const inv = await Invoice.update(
+      { approved: 0 },
+      { where: { id: req.body.id } } // Replace someInvoiceId with the actual ID or condition
+    );
+    
+    const voucher = await Vouchers.findOne({
+      where:{
+        invoice_Id: req.body.id
+      }
+    })
+    const voucher_Heads = await Voucher_Heads.destroy({
+      where:{
+        VoucherId: voucher.id
+      }
+    })
+    await Vouchers.destroy({
+      where:{
+        invoice_Id: req.body.id
+      }
+    })
+    res.json({status: 'success'});
+  }catch(e){
+    console.error(e)
+  }
+})
+
 routes.post("/approve", async(req, res) => {
   try{
     const chargesHeads = await Charge_Head.findAll({
