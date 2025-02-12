@@ -341,6 +341,9 @@ routes.get("/getAllInoivcesByPartyId", async(req, res) => {
       },
       include:[
         {
+          model:Invoice_Transactions
+        },
+        {
           model:SE_Job,
           // attributes:['jobNo', 'subType', 'id', 'operation'],
           include:[

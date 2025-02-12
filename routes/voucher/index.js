@@ -401,7 +401,11 @@ routes.get("/getAllJobPayRecVouchers", async (req, res) => {
         }
     },
     
-      include: [{
+      include: [
+        {
+          model: Invoice_Transactions
+        },
+        {
         model: Voucher_Heads,
         attributes: ['type', 'amount', 'accountType', 'ChildAccountId'],
         // where: { type: "debit" }
@@ -595,17 +599,36 @@ routes.post("/deletePaymentReceipt", async(req, res) => {
   try {
     // console.log(req.body.id)
     const trans = await Invoice_Transactions.findAll({where:{VoucherId:req.body.id}})
-    for(let x of trans){
-      // console.log(">>",x.dataValues)
-      const updateInvoice = await Invoice.update(
-        {
-          recieved: "0",
-          paid: "0",
-          status: "1",
-        },
-        {where:{ id:x.dataValues.InvoiceId}}
-      )
-      // console.log(">",updateInvoice)
+    // for(let x of trans){
+    //   // console.log(">>",x.dataValues)
+    //   const updateInvoice = await Invoice.update(
+    //     {
+    //       recieved: "0",
+    //       paid: "0",
+    //       status: "1",
+    //     },
+    //     {where:{ id:x.dataValues.InvoiceId}}
+    //   )
+    //   // console.log(">",updateInvoice)
+    // }
+    for (let x of trans) {
+      const invoice = await Invoice.findOne({ where: { id: x.dataValues.InvoiceId } });
+      console.log(x)
+      if (invoice) {
+        let updateData = { status: "1" };
+        console.log("Invoice to be deleted>>>",invoice.dataValues)
+        if (invoice.dataValues.payType === "Recievable") {
+          updateData.recieved = (parseFloat(invoice.dataValues.recieved) - parseFloat(x.dataValues.amount)).toString();
+        } else if (invoice.dataValues.payType === "Payble") {
+          updateData.paid = (parseFloat(invoice.dataValues.paid) - parseFloat(x.dataValues.amount)).toString();
+        }
+        console.log("Update Data>>>", updateData)
+        const updateInvoice = await Invoice.update(updateData, {
+          where: { id: x.dataValues.InvoiceId }
+        });
+    
+        // console.log(">", updateInvoice);
+      }
     }
     await Voucher_Heads.destroy({where:{VoucherId:req.body.id}})
     await Invoice_Transactions.destroy({where:{VoucherId:req.body.id}})
