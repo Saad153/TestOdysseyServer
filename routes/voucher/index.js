@@ -840,7 +840,7 @@ routes.post("/makeTransaction", async(req, res) => {
           let a = await Invoice_Transactions.create(
             {
               gainLoss: req.body.gainLoss,
-              amount: req.body.totalReceiving,
+              amount: x.receiving,
               InvoiceId: x.id,
               VoucherId: vID
               
@@ -853,15 +853,17 @@ routes.post("/makeTransaction", async(req, res) => {
             InvoiceId: x.id
           }
         })
-        let b = await Invoice_Transactions.create(
-          {
-            gainLoss: req.body.gainLoss,
-            amount: req.body.totalReceiving,
-            InvoiceId: x.id,
-            VoucherId: vID
-            
-          }
-        )
+        if(x.receiving!=0){
+          let b = await Invoice_Transactions.create(
+            {
+              gainLoss: req.body.gainLoss,
+              amount: x.receiving,
+              InvoiceId: x.id,
+              VoucherId: vID
+              
+            }
+          )
+        }
       }
     }
     res.json({status:'success', result: vouchers});
