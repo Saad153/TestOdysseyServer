@@ -652,18 +652,18 @@ const createInvoices = async (lastJB, init, type, companyId, operation, x) => {
   try{
     let company = '';
     let inVoiceDeleteList = []
-    let account = await Client_Associations.findOne({
-      where:{
-        ClientId: x.partyId
-      }
-    })
-    if(account == null){
-      account = await Vendor_Associations.findOne({
-        where: {
-          VendorId: x.partyId
-        }
-      })
-    }
+    // let account = await Client_Associations.findOne({
+    //   where:{
+    //     ClientId: x.partyId
+    //   }
+    // })
+    // if(account == null){
+    //   account = await Vendor_Associations.findOne({
+    //     where: {
+    //       VendorId: x.partyId
+    //     }
+    //   })
+    // }
     // console.log("Account:",account)
     if(lastJB?.Charge_Heads?.length==0){
       inVoiceDeleteList.push(lastJB.id)
@@ -678,7 +678,7 @@ const createInvoices = async (lastJB, init, type, companyId, operation, x) => {
       companyId:companyId,
       operation:operation,
       payType: x.type,
-      party_Id: account.dataValues.ChildAccountId,
+      party_Id: x.partyId,
       party_Name: x.name,
       SEJobId: x.SEJobId,
       currency:(init=="JB"||init=="JI")?'PKR':x.currency,
@@ -696,6 +696,7 @@ const createInvoices = async (lastJB, init, type, companyId, operation, x) => {
 
 routes.get("/getAllInvoiceData", async(req, res) => {
   try{
+    console.log("Invoice ID:",req.headers.id)
     const InvTran = await Invoice_Transactions.findAll({
       where:{InvoiceId:req.headers.id}
     })
@@ -714,20 +715,20 @@ routes.get("/getAllInvoiceData", async(req, res) => {
 
     let heads = []
     for(let x of vouchers){
-      let party
-      if(req.headers.party_type != "vendor" && req.headers.party_type != "agent"){
-        party = await Client_Associations.findOne({
-          where:{ClientId:req.headers.party_id}
-        })
-      }else{
-        party = await Vendor_Associations.findOne({
-          where:{VendorId:req.headers.party_id}
-        })
-      }
+      // let party
+      // if(req.headers.party_type != "vendor" && req.headers.party_type != "agent"){
+      //   party = await Client_Associations.findOne({
+      //     where:{ClientId:req.headers.party_id}
+      //   })
+      // }else{
+      //   party = await Vendor_Associations.findOne({
+      //     where:{VendorId:req.headers.party_id}
+      //   })
+      // }
       const head = await Voucher_Heads.findAll({
         where: {
           VoucherId: x.id,
-          ChildAccountId: party?.dataValues?.ChildAccountId,
+          ChildAccountId: req.headers.party_id,
           narration: {
             [Op.notLike]: '%Ex-Rate%'
           }
@@ -1255,6 +1256,7 @@ routes.post("/approve", async(req, res) => {
   }
 
   await Voucher_Head.map(async(x)=>{
+    console.log(x.ChildAccountId)
      await Voucher_Heads.create(x)
   })
     res.json({status: 'success', result: req.body.id});
