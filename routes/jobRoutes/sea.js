@@ -243,9 +243,10 @@ routes.post("/create", async(req, res) => {
     } else {
       data.airLineId=null
     }
+    console.log("Data Operation:",data.operation)
     const check = await SE_Job.findOne({
       order:[['jobId','DESC']], attributes:["jobId"],
-      where:{operation:data.operation, companyId:data.companyId}
+      where:{operation:data.operation, companyId:data.companyId.toString()}
     });
     const result = await SE_Job.create({
       ...data,
@@ -256,6 +257,7 @@ routes.post("/create", async(req, res) => {
     res.json({status:'success', result:await getJob(result.id)});
   }
   catch (error) {
+    console.error(error)
     res.json({status:'error', result:error});
   }
 });

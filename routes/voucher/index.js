@@ -398,6 +398,9 @@ routes.get("/getAllJobPayRecVouchers", async (req, res) => {
         CompanyId: req.headers.companyid,
         vType: {
             [Op.notIn]: ["OP", "SI", "PI", "OI", "OB" ]
+        },
+        type: {
+          [Op.notLike]: "%Voucher"
         }
     },
     

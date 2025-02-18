@@ -650,21 +650,24 @@ routes.get("/getHeadesNew", async(req, res) => {
 // This function is used in the API below helps to set invoice number according to the last generated invoice with fiscal year
 const createInvoices = async (lastJB, init, type, companyId, operation, x) => {
   try{
+    console.log("Make Transaction:",x)
     let company = '';
     let inVoiceDeleteList = []
-    // let account = await Client_Associations.findOne({
-    //   where:{
-    //     ClientId: x.partyId
-    //   }
-    // })
-    // if(account == null){
-    //   account = await Vendor_Associations.findOne({
-    //     where: {
-    //       VendorId: x.partyId
-    //     }
-    //   })
-    // }
-    // console.log("Account:",account)
+    let account = await Client_Associations.findOne({
+      where:{
+        CompanyId: companyId,
+        ClientId: x.partyId
+      }
+    })
+    if(account == null){
+      account = await Vendor_Associations.findOne({
+        where: {
+          CompanyId: companyId,
+          VendorId: x.partyId
+        }
+      })
+    }
+    console.log("Account:",account)
     if(lastJB?.Charge_Heads?.length==0){
       inVoiceDeleteList.push(lastJB.id)
     }
@@ -678,7 +681,7 @@ const createInvoices = async (lastJB, init, type, companyId, operation, x) => {
       companyId:companyId,
       operation:operation,
       payType: x.type,
-      party_Id: x.partyId,
+      party_Id: account.ChildAccountId,
       party_Name: x.name,
       SEJobId: x.SEJobId,
       currency:(init=="JB"||init=="JI")?'PKR':x.currency,
@@ -857,7 +860,7 @@ routes.post("/openingInvoice", async(req, res) => {
       voucher_Id: `${invoices.dataValues.companyId == 1 ? "SNS" : invoices.dataValues.companyId == 2 ? "CLS" : "ACS"}-${invoices.dataValues.payType=="Recievable"?"OI":"OB"}-${check == null ? 1 : parseInt(check.voucher_No) + 1}/${moment().month() >= 6 ? moment().add(1, 'year').format('YY') : moment().format('YY')}`
     }
 
-    console.log("Vouchers>>",vouchers)
+    // console.log("Vouchers>>",vouchers)
 
     
 
@@ -874,14 +877,14 @@ routes.post("/openingInvoice", async(req, res) => {
     // req.body.subType == "FCL"?incomeAccount = await Child_Account.findOne({where:{title:"FCL FREIGHT INCOME"}, include:[{model:Parent_Account, where:{CompanyId:invoices.dataValues.companyId}}]}):
     // req.body.subType == "LCL"?incomeAccount = await Child_Account.findOne({where:{title:"LCL FREIGHT INCOME"}, include:[{model:Parent_Account, where:{CompanyId:invoices.dataValues.companyId}}]}):
     // incomeAccount = await Child_Account.findOne({where:{title:"AIR FREIGHT INCOME"}, include:[{model:Parent_Account, where:{CompanyId:invoices.dataValues.companyId}}]})
-    let account
-    console.log(invoices.dataValues.partyType)
-    if(invoices.dataValues.partyType == "vendor"||invoices.dataValues.partyType == "agent"){
-      account = await Vendor_Associations.findOne({where:{VendorId:invoices.dataValues.party_Id}})
-    }else{
-      account = await Client_Associations.findOne({where:{ClientId:invoices.dataValues.party_Id}})
-    }
-    console.log("Account Id:", account.dataValues)
+    // let account
+    console.log(invoices.dataValues)
+    // if(invoices.dataValues.partyType == "vendor"||invoices.dataValues.partyType == "agent"){
+    //   account = await Vendor_Associations.findOne({where:{VendorId:invoices.dataValues.party_Id}})
+    // }else{
+    //   account = await Client_Associations.findOne({where:{ClientId:invoices.dataValues.party_Id}})
+    // }
+    // console.log("Account Id:", account.dataValues)
     let Voucher_Head = []
     let narration = `${req.body.type=="OI"?"Opening Invoice":"Opening Bill"} ${invoices.dataValues.invoice_No} From ${invoices.dataValues.party_Name}`
 
@@ -894,7 +897,7 @@ routes.post("/openingInvoice", async(req, res) => {
       narration:narration,
       VoucherId:voucher.dataValues.id,
       accountType: "partyAccount",
-      ChildAccountId:account.dataValues.ChildAccountId,
+      ChildAccountId:invoices.dataValues.party_Id,
       createdAt: invoices.dataValues.createdAt
     })
     Voucher_Head.push({
@@ -1019,7 +1022,7 @@ routes.post("/unApprove", async(req, res)=>{
     console.log(req.body.id)
     const inv = await Invoice.update(
       { approved: 0 },
-      { where: { id: req.body.id } } // Replace someInvoiceId with the actual ID or condition
+      { where: { id: req.body.id.toString() } } // Replace someInvoiceId with the actual ID or condition
     );
     
     const voucher = await Vouchers.findOne({
@@ -1319,6 +1322,31 @@ routes.get('/testGetLastInvoice', async(req, res) => {
 // displays job data according to Invoice balance Page
 routes.get("/jobBalancing", async (req, res) => {
   try {
+    console.log(req.headers)
+    let account
+    if(req.headers.party){
+      console.log("ID>>",req.headers.party)
+      account = await Client_Associations.findOne({
+        where:{
+          ClientId: req.headers.party
+        }
+      })
+      if(!account){
+        account = await Vendor_Associations.findOne({
+          where:{
+            VendorId: req.headers.party
+          }
+        })
+      }
+    }
+    if(req.headers.overseasagent){
+      console.log("ID>>",req.headers.overseasagent)
+      account = await Vendor_Associations.findOne({
+        where:{
+          VendorId: req.headers.overseasagent
+        }
+      })
+    }
     let invoiceObj = {
       // below condition sets the date range
       createdAt: {
@@ -1339,7 +1367,7 @@ routes.get("/jobBalancing", async (req, res) => {
       invoiceObj.payType=req.headers.paytype
     }
     // party wise invoice/bill
-    req.headers.party?invoiceObj.party_Id=req.headers.party:req.headers.overseasagent?invoiceObj.party_Id=req.headers.overseasagent:null;
+    account?invoiceObj.party_Id=account.ChildAccountId:null
     // Company wise invoice/bill
     if(req.headers.company=='4'){
       invoiceObj = {
@@ -1408,6 +1436,92 @@ routes.get("/jobBalancing", async (req, res) => {
 });
 
 // this below api is just a copy of the above api just it's specifically for Agent-Invoices/Agent-Bills only
+// routes.get("/invoiceBalancing", async (req, res) => {
+//   try {
+//     let invoiceObj = {
+//       createdAt: {
+//         [Op.gte]: moment(req.headers.from).toDate(),
+//         [Op.lte]: moment(req.headers.to).add(1, 'days').toDate(),
+//       },
+//       // status:{ [Op.ne]: null },
+//       [Op.and]: [
+//         { type: { [Op.ne]: "Job Invoice" } },
+//         { type: { [Op.ne]: "Old Job Invoice" } },
+//         { type: { [Op.ne]: "Job Bill" } },
+//         { type: { [Op.ne]: "Old Job Bill" } },
+//       ]
+//     };
+//     if(req.headers.paytype!="All"){
+//       invoiceObj.payType=req.headers.paytype
+//     }
+//     if(req.headers.company=='4'){
+//       invoiceObj = {
+//         ...invoiceObj,
+//         [Op.or]: [{companyId: '1'}, {companyId:'3'}]
+//       }
+//     } else {
+//       req.headers.company?invoiceObj.companyId=req.headers.company:null;
+//     }
+//     let accountObj
+//     if(req.headers.company=='4'){
+//       accountObj = {
+//         [Op.or]: [{CompanyId: '1'}, {CompanyId:'3'}]
+//       }
+//     } else {
+//       req.headers.company?accountObj.CompanyId=req.headers.company:null;
+//     }
+//     console.log(accountObj)
+//     let account
+//     if(req.headers.overseasagent){
+//       account = await Vendor_Associations.findAll({
+//         where: {
+//           ...accountObj,
+//           VendorId: req.headers.overseasagent
+//         }
+//       })
+//     }
+//     console.log("Account", account.dataValues)
+//     account?invoiceObj.party_Id=account.ChildAccountId:null;
+//     const result = await Invoice.findAll({
+//       where:invoiceObj,
+//       attributes:['id', 'invoice_No', 'payType', 'currency', 'ex_rate', 'roundOff', 'total', 'paid', 'recieved', 'createdAt', 'party_Name', 'companyId'],
+//       include:[{
+//         model:SE_Job,
+//         include:[
+//           { model: Clients, as:'shipper', attributes:['name'] },
+//           { model: Clients, as:'Client', attributes:['name'] },
+//           { model: Vessel, as:'vessel', attributes:['name'] },
+//           { model: Voyage, as:'Voyage', attributes:['voyage'] },
+
+//           {
+//             model: Employees,
+//             as:'sales_representator', 
+//             attributes:['name']
+//           },
+//           {
+//             model:Bl,
+//             attributes:['hbl', 'mbl'],
+//           },
+//           {
+//             model:SE_Equipments,
+//             attributes:['qty', 'size']
+//           }
+//         ],
+//         order: [[ 'createdAt', 'ASC' ]],
+//         attributes:['id', 'fd', 'freightType', 'jobNo', 'operation', 'subType', 'vol', 'weight', 'container', 'customerRef', 'fileNo', 'arrivalDate', 'shipDate'],
+//       },
+//       {
+//         model:Charge_Head,
+//       }]
+
+//     });
+//     await res.json({ status: "success", result: result });
+//   } catch (error) {
+//     console.log(error)
+//     res.json({ status: "error", result: error });
+//   }
+// });
+
 routes.get("/invoiceBalancing", async (req, res) => {
   try {
     let invoiceObj = {
@@ -1415,67 +1529,84 @@ routes.get("/invoiceBalancing", async (req, res) => {
         [Op.gte]: moment(req.headers.from).toDate(),
         [Op.lte]: moment(req.headers.to).add(1, 'days').toDate(),
       },
-      // status:{ [Op.ne]: null },
       [Op.and]: [
-        { type: { [Op.ne]: "Job Invoice" } },
-        { type: { [Op.ne]: "Old Job Invoice" } },
-        { type: { [Op.ne]: "Job Bill" } },
-        { type: { [Op.ne]: "Old Job Bill" } },
+        { type: { [Op.notIn]: ["Job Invoice", "Old Job Invoice", "Job Bill", "Old Job Bill"] } }
       ]
     };
-    if(req.headers.paytype!="All"){
-      invoiceObj.payType=req.headers.paytype
+
+    if (req.headers.paytype !== "All") {
+      invoiceObj.payType = req.headers.paytype;
     }
-    if(req.headers.company=='4'){
-      invoiceObj = {
-        ...invoiceObj,
-        [Op.or]: [{companyId: '1'}, {companyId:'3'}]
-      }
-    } else {
-      req.headers.company?invoiceObj.companyId=req.headers.company:null;
+
+    if (req.headers.company === "4") {
+      invoiceObj.companyId = { [Op.in]: ["1", "3"] };
+    } else if (req.headers.company) {
+      invoiceObj.companyId = req.headers.company;
     }
-    // req.headers.currency?invoiceObj.currency=req.headers.currency:null;
-    // req.headers.jobtypes?.length>0?invoiceObj.operation=req.headers.jobtypes.split(","):null;
-    (req.headers.overseasagent!=''&&req.headers.overseasagent!=null)?invoiceObj.party_Id=req.headers.overseasagent:null;
+
+    let accountObj = {}; // Ensure it's always initialized
+    if (req.headers.company === "4") {
+      accountObj.CompanyId = { [Op.in]: ["1", "3"] };
+    } else if (req.headers.company) {
+      accountObj.CompanyId = req.headers.company;
+    }
+
+    console.log("AccountObj:", accountObj);
+
+    let account = [];
+    if (req.headers.overseasagent) {
+      account = await Vendor_Associations.findAll({
+        where: {
+          ...accountObj,
+          VendorId: req.headers.overseasagent,
+        },
+      });
+    }
+
+    console.log("Account:", account);
+
+    // Extract ChildAccountId(s) from the fetched accounts
+    if (account.length > 0) {
+      invoiceObj.party_Id = account.map(a => a.ChildAccountId);
+    }
+
     const result = await Invoice.findAll({
-      where:invoiceObj,
-      attributes:['id', 'invoice_No', 'payType', 'currency', 'ex_rate', 'roundOff', 'total', 'paid', 'recieved', 'createdAt', 'party_Name', 'companyId'],
-      include:[{
-        model:SE_Job,
-        include:[
-          { model: Clients, as:'shipper', attributes:['name'] },
-          { model: Clients, as:'Client', attributes:['name'] },
-          { model: Vessel, as:'vessel', attributes:['name'] },
-          { model: Voyage, as:'Voyage', attributes:['voyage'] },
-
-          {
-            model: Employees,
-            as:'sales_representator', 
-            attributes:['name']
-          },
-          {
-            model:Bl,
-            attributes:['hbl', 'mbl'],
-          },
-          {
-            model:SE_Equipments,
-            attributes:['qty', 'size']
-          }
-        ],
-        order: [[ 'createdAt', 'ASC' ]],
-        attributes:['id', 'fd', 'freightType', 'jobNo', 'operation', 'subType', 'vol', 'weight', 'container', 'customerRef', 'fileNo', 'arrivalDate', 'shipDate'],
-      },
-      {
-        model:Charge_Head,
-      }]
-
+      where: invoiceObj,
+      attributes: [
+        "id", "invoice_No", "payType", "currency", "ex_rate", "roundOff", 
+        "total", "paid", "recieved", "createdAt", "party_Name", "companyId"
+      ],
+      include: [
+        {
+          model: SE_Job,
+          include: [
+            { model: Clients, as: "shipper", attributes: ["name"] },
+            { model: Clients, as: "Client", attributes: ["name"] },
+            { model: Vessel, as: "vessel", attributes: ["name"] },
+            { model: Voyage, as: "Voyage", attributes: ["voyage"] },
+            { model: Employees, as: "sales_representator", attributes: ["name"] },
+            { model: Bl, attributes: ["hbl", "mbl"] },
+            { model: SE_Equipments, attributes: ["qty", "size"] },
+          ],
+          order: [["createdAt", "ASC"]],
+          attributes: [
+            "id", "fd", "freightType", "jobNo", "operation", "subType", "vol", 
+            "weight", "container", "customerRef", "fileNo", "arrivalDate", "shipDate"
+          ],
+        },
+        {
+          model: Charge_Head,
+        },
+      ],
     });
-    await res.json({ status: "success", result: result });
+
+    res.json({ status: "success", result });
   } catch (error) {
-    console.log(error)
+    console.error(error);
     res.json({ status: "error", result: error });
   }
 });
+
 
 // For Data Backup
 routes.get("/invoiceTest", async (req, res) => {

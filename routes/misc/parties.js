@@ -9,6 +9,7 @@ const { Employees } = require("../../functions/Associations/employeeAssociations
 const Op = Sequelize.Op;
 const url = 'parties';
 const moment = require("moment");
+const { Child_Account } = require('../../functions/Associations/accountAssociations');
 
 routes.get(`/${url}/getPartiesbyType`, async (req, res) => {
   try{
@@ -23,6 +24,9 @@ routes.get(`/${url}/getPartiesbyType`, async (req, res) => {
           model: Client_Associations,
           where: {
             CompanyId: req.headers.companyid
+          },
+          include:{
+            model: Child_Account
           }
         }
       })
@@ -34,6 +38,9 @@ routes.get(`/${url}/getPartiesbyType`, async (req, res) => {
           model: Vendor_Associations,
           where: {
             CompanyId: req.headers.companyid
+          },
+          include:{
+            model: Child_Account
           }
         },
         where:{
@@ -48,6 +55,9 @@ routes.get(`/${url}/getPartiesbyType`, async (req, res) => {
           model: Vendor_Associations,
           where: {
             CompanyId: req.headers.companyid
+          },
+          include:{
+            model: Child_Account
           }
         },
         where: {
