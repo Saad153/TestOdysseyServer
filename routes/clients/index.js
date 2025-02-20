@@ -7,11 +7,17 @@ const { Employees } = require("../../functions/Associations/employeeAssociations
 const { Clients, Client_Associations } = require("../../functions/Associations/clientAssociation");
 const { Child_Account, Parent_Account } = require("../../functions/Associations/accountAssociations");
 
-const createChildAccounts = (list, name) => {
+const createChildAccounts = async (list, name) => {
     let result = [];
-    list.forEach((x)=>{
-        result.push({title:name, ParentAccountId:x.id, subCategory:'Customer'})
-    })
+    for(let x of list){
+        const childs = await Child_Account.findOne({
+            where: {
+                ParentAccountId: x.id
+            },
+            order: [[Sequelize.literal('CAST("code" AS INTEGER)'), 'DESC']]
+        });        
+        result.push({title:name, ParentAccountId:x.id, subCategory:'Customer', code: childs?(parseInt(childs.dataValues.code)+1).toString():(x.code+"0001")})
+    }
     return result;
 }
 const createAccountList = (parent, child, id) => {
@@ -113,17 +119,14 @@ routes.post("/createClient", async(req, res) => {
         value.salesRepresentatorId = value.salesRepresentatorId==""?null:value.salesRepresentatorId;
         value.docRepresentatorId = value.docRepresentatorId==""?null:value.docRepresentatorId;
         value.authorizedById = value.authorizedById==""?null:value.authorizedById;
-        try{
-            console.log(value)
-            const result = await Clients.create({...value, code : parseInt(check.code) + 1 })   
-            // console.log(result)
-        }catch(e){
-            console.log(e)
-        }
+        console.log(value)
+        const result = await Clients.create({...value, code : parseInt(check.code) + 1 })   
+        // console.log(result)
+        
         const accounts = await Parent_Account.findAll({
             where: { title: { [Op.or]: [`${req.body.pAccountName}`] } }
         });
-        const accountsList = await Child_Account.bulkCreate(createChildAccounts(accounts, result.name));
+        const accountsList = await Child_Account.bulkCreate(await createChildAccounts(accounts, result.name));
         await Client_Associations.bulkCreate(createAccountList(accounts, accountsList, result.id));
         res.json({
             status:'success', 
@@ -131,6 +134,7 @@ routes.post("/createClient", async(req, res) => {
         });
     }
     catch (error) {
+        console.error(error)
       res.json({status:'error', result:error});
     }
 });
@@ -208,7 +212,7 @@ routes.post("/editClient", async(req, res) => {
             const accounts = await Parent_Account.findAll({
               where: { title: { [Op.or]: [`${req.body.pAccountName}`] } }
             });
-            const accountsList = await Child_Account.bulkCreate(createChildAccounts(accounts, value.name));
+            const accountsList = await Child_Account.bulkCreate(await createChildAccounts(accounts, value.name));
             await clientAssociation.bulkCreate(createAccountList(accounts, accountsList, value.id)).catch((x)=>console.log(x))
         } else {
             clientAssociation.forEach(async(x)=>{

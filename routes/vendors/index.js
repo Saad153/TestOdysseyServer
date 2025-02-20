@@ -26,11 +26,25 @@ const createAccountList = (parent, child, id) => {
     return result;
 }
 
-const createChildAccounts = (list, name) => {
+// const createChildAccounts = (list, name) => {
+//     let result = [];
+//     list.forEach((x)=>{
+//         result.push({title:name, ParentAccountId:x.id, subCategory:'Vendor'})
+//     });
+//     return result;
+// }
+
+const createChildAccounts = async (list, name) => {
     let result = [];
-    list.forEach((x)=>{
-        result.push({title:name, ParentAccountId:x.id, subCategory:'Vendor'})
-    });
+    for(let x of list){
+        const childs = await Child_Account.findOne({
+            where: {
+                ParentAccountId: x.id
+            },
+            order: [[Sequelize.literal('CAST("code" AS INTEGER)'), 'DESC']]
+        });        
+        result.push({title:name, ParentAccountId:x.id, subCategory:'Vendor', code: childs?(parseInt(childs.dataValues.code)+1).toString():(x.code+"0001")})
+    }
     return result;
 }
 
@@ -97,7 +111,7 @@ routes.post("/create", async(req, res) => {
                 title: { [Op.or]: [`${req.body.pAccountName}`] }
             }
         });
-        const accountsList = await Child_Account.bulkCreate(createChildAccounts(accounts, result.name));
+        const accountsList = await Child_Account.bulkCreate(await createChildAccounts(accounts, result.name));
         await Vendor_Associations.bulkCreate(createAccountList(accounts, accountsList, result.id)).catch((x)=>console.log(x))
         res.json({
             status:'success', 
@@ -133,7 +147,7 @@ routes.post("/edit", async(req, res) => {
                 title: { [Op.or]: [`${req.body.pAccountName}`] }
               }
             });
-            const accountsList = await Child_Account.bulkCreate(createChildAccounts(accounts, value.name));
+            const accountsList = await Child_Account.bulkCreate(await createChildAccounts(accounts, value.name));
             await Vendor_Associations.bulkCreate(createAccountList(accounts, accountsList, value.id)).catch((x)=>console.log(x))
         } else {
             console.log("Vendor Associations")

@@ -41,7 +41,7 @@ routes.get("/getValues", async(req, res) => {
       }
       if(x.types.includes('Shipping Line')){
         // console.log(x)
-        finalResult.sLine.push({name:`${x.name} (${x.code})`, id:x.id, types:x.types})
+        finalResult.sLine.push({name:`${x.name} (${x.code})`, id:parseInt(x.id), types:x.types})
       }
     })
     let tempClient = [];

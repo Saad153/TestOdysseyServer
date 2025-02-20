@@ -1027,7 +1027,7 @@ routes.post("/unApprove", async(req, res)=>{
     
     const voucher = await Vouchers.findOne({
       where:{
-        invoice_Id: req.body.id
+        invoice_Id: req.body.id.toString()
       }
     })
     const voucher_Heads = await Voucher_Heads.destroy({
@@ -1037,7 +1037,7 @@ routes.post("/unApprove", async(req, res)=>{
     })
     await Vouchers.destroy({
       where:{
-        invoice_Id: req.body.id
+        invoice_Id: req.body.id.toString()
       }
     })
     res.json({status: 'success'});
