@@ -1271,14 +1271,14 @@ routes.get("/jobBalancing", async (req, res) => {
     // party wise invoice/bill
     req.headers.party?invoiceObj.party_Id=req.headers.party:req.headers.overseasagent?invoiceObj.party_Id=req.headers.overseasagent:null;
     // Company wise invoice/bill
-    if(req.headers.company=='4'){
-      invoiceObj = {
-        ...invoiceObj,
-        [Op.or]: [{companyId: '1'}, {companyId:'3'}]
-      }
-    } else {
-      req.headers.company?invoiceObj.companyId=req.headers.company:null;
-    }
+    // if(req.headers.company=='4'){
+    //   invoiceObj = {
+    //     ...invoiceObj,
+    //     [Op.or]: [{companyId: '1'}, {companyId:'3'}]
+    //   }
+    // } else {
+    //   req.headers.company?invoiceObj.companyId=req.headers.company:null;
+    // }
     // Currency wise invoice/bill
     req.headers.currency?invoiceObj.currency=req.headers.currency:null;
     // Job Type/operation wise invoice/bill

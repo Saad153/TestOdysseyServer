@@ -1,7 +1,7 @@
 module.exports = (sequelize, DataTypes) => {
     const Commodity = sequelize.define("Commodity", {
         name:{
-            type:DataTypes.STRING,
+            type:DataTypes.TEXT,
             allowNull: false,
             validate:{
                 notEmpty: true
@@ -37,6 +37,9 @@ module.exports = (sequelize, DataTypes) => {
         active:{
             type:DataTypes.STRING
         },
+        finYear:{
+            type:DataTypes.STRING
+        }
     })
     return Commodity;
 }
