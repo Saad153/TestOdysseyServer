@@ -684,24 +684,46 @@ routes.post("/makeTransaction", async(req, res) => {
           }
         }else{
           // console.log(">>>>>>>>>> ",x.payType)
-          if(x.payType=="Recievable"){
-            const updateInvoice = await Invoice.update(
-              {
-                recieved: x.receiving, // Cast `recieved` to numeric, then add
-                status: "1",
-              },
-              { where: { id: x.id } }
-            );
-            
+          if(x.Invoice_Transactions[0]?.VoucherId!=req.body.voucherId){
+            if(x.payType=="Recievable"){
+              const updateInvoice = await Invoice.update(
+                {
+                  recieved: literal(`CAST(recieved AS numeric) + ${x.receiving}`), // Cast `recieved` to numeric, then add
+                  status: "1",
+                },
+                { where: { id: x.id } }
+              );
+              
+            }else{
+              const updateInvoice = await Invoice.update(
+                {
+                  paid: literal(`CAST(recieved AS numeric) + ${x.receiving}`), // Cast `recieved` to numeric, then add
+                  status: "1",
+                },
+                { where: { id: x.id } }
+              );
+  
+            }
           }else{
-
-            const updateInvoice = await Invoice.update(
-              {
-                paid: x.receiving, // Cast `recieved` to numeric, then add
-                status: "1",
-              },
-              { where: { id: x.id } }
-            );
+            if(x.payType=="Recievable"){
+              const updateInvoice = await Invoice.update(
+                {
+                  recieved: x.receiving, // Cast `recieved` to numeric, then add
+                  status: "1",
+                },
+                { where: { id: x.id } }
+              );
+              
+            }else{
+  
+              const updateInvoice = await Invoice.update(
+                {
+                  paid: x.receiving, // Cast `recieved` to numeric, then add
+                  status: "1",
+                },
+                { where: { id: x.id } }
+              );
+            }
           }
         }
         invoicesList += `${x.id},`
@@ -850,12 +872,39 @@ routes.post("/makeTransaction", async(req, res) => {
             }
           )
         }
-      }else{
-        let a = await Invoice_Transactions.destroy({
-          where: {
-            InvoiceId: x.id
+      }else if(!req.body.advance){
+        if(x.Invoice_Transactions[0]?.VoucherId!=req.body.voucherId){
+          if(x.receiving!=0){
+            let a = await Invoice_Transactions.create(
+              {
+                gainLoss: req.body.gainLoss,
+                amount: x.receiving,
+                InvoiceId: x.id,
+                VoucherId: vID
+                
+              }
+            )
           }
-        })
+        }else{
+          let a = await Invoice_Transactions.destroy({
+            where: {
+              InvoiceId: x.id
+            }
+          })
+          if(x.receiving!=0){
+            let b = await Invoice_Transactions.create(
+              {
+                gainLoss: req.body.gainLoss,
+                amount: x.receiving,
+                InvoiceId: x.id,
+                VoucherId: vID
+                
+              }
+            )
+          }
+        }
+      }else{
+        
         if(x.receiving!=0){
           let b = await Invoice_Transactions.create(
             {
@@ -867,6 +916,7 @@ routes.post("/makeTransaction", async(req, res) => {
             }
           )
         }
+
       }
     }
     res.json({status:'success', result: vouchers});
