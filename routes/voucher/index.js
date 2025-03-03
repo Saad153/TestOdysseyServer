@@ -435,7 +435,8 @@ routes.get("/getAllJobPayRecVouchers", async (req, res) => {
             { model:SE_Equipments, attributes:['qty', 'size'] },
             { model:Bl, required: false, attributes:['mbl', 'hbl'] },
           ]
-        }
+        },
+        { model:Invoice_Transactions },
       ]
     })
     result.forEach((x)=>{
@@ -683,7 +684,7 @@ routes.post("/makeTransaction", async(req, res) => {
 
           }
         }else{
-          // console.log(">>>>>>>>>> ",x.payType)
+          console.log(">>>>>>>>>> ",x)
           if(x.Invoice_Transactions[0]?.VoucherId!=req.body.voucherId){
             if(x.payType=="Recievable"){
               const updateInvoice = await Invoice.update(
@@ -788,7 +789,12 @@ routes.post("/makeTransaction", async(req, res) => {
       vID = vouchers.id
     }else{
       const vouchers = await Vouchers.update(
-        { invoices: invoicesList }, // Data to update
+        { 
+          exRate: req.body.exRate,
+          chequeNo: req.body.checkNo,
+          chequeDate: req.body.checkDate,
+          invoices: invoicesList
+        }, // Data to update
         { where: { id: vID } }      // Query options
       );
       await Voucher_Heads.destroy({
@@ -956,35 +962,50 @@ routes.post("/createVoucher", async(req, res) => {
     res.json({status:'error', result:e});
   }
 })
-routes.post("/updateVoucher", async(req, res) => {
-  try{
-    console.log("Update Voucher>>", req.body)
-    let voucher_Heads = req.body.Voucher_Heads
-    // const lastVoucher = await Vouchers.findOne({
-    //   where: {
-    //     vType: req.body.vType,
-    //     CompanyId: req.body.CompanyId,
-    //   },
-    //   // order: [["voucher_No", "DESC"]],
-    // })
-    // if(lastVoucher==null){
-    //   req.body.voucher_No = 1
-    //   req.body.voucher_Id = `${req.body.CompanyId == 1 ? "SNS" : req.body.CompanyId == 2 ? "CLS" : "ACS"}-${req.body.vType}-${req.body.voucher_No}/${moment().month() >= 6 ? moment().add(1, 'year').format('YY') : moment().format('YY')}`
-    // }else{
-    //   req.body.voucher_No = lastVoucher.voucher_No + 1
-    //   req.body.voucher_Id = `${req.body.CompanyId == 1 ? "SNS" : req.body.CompanyId == 2 ? "CLS" : "ACS"}-${req.body.vType}-${req.body.voucher_No}/${moment().month() >= 6 ? moment().add(1, 'year').format('YY') : moment().format('YY')}`
-    // } 
-    const result = await Vouchers.upsert(req.body)
-    for(let x of voucher_Heads){
-      x.VoucherId = result.id
-      await Voucher_Heads.upsert(x)
+// routes.post("/updateVoucher", async(req, res) => {
+//   try{
+//     console.log("Update Voucher>>", req.body)
+//     let voucher = req.body
+//     let voucher_Heads = voucher.Voucher_Heads
+//     delete voucher.Voucher_Heads
+//     const result = await Vouchers.upsert(voucher)
+//     for(let x of voucher_Heads){
+//       x.VoucherId = result.id
+//       await Voucher_Heads.upsert(x)
+//     }
+//     res.json({status:'success', result: result});
+//   }catch(e){
+//     console.log(e)
+//     res.json({status:'error', result:e});
+//   }
+// })
+
+routes.post("/updateVoucher", async (req, res) => {
+  try {
+    console.log("Update Voucher>>", req.body);
+    let voucher = req.body;
+    let voucher_Heads = voucher.Voucher_Heads;
+    delete voucher.Voucher_Heads;
+
+    // Upsert the main voucher and get the result
+    const result = await Vouchers.upsert(voucher);
+
+    // Ensure the result contains the ID of the upserted voucher
+    const voucherId = result[0].id; // Sequelize upsert returns an array [instance, created]
+
+    // Update each voucher head with the correct VoucherId
+    for (let x of voucher_Heads) {
+      x.VoucherId = voucherId; // Set the VoucherId for each voucher head
+      await Voucher_Heads.upsert(x);
     }
-    res.json({status:'success', result: result});
-  }catch(e){
-    console.log(e)
-    res.json({status:'error', result:e});
+
+    res.json({ status: 'success', result: result });
+  } catch (e) {
+    console.log(e);
+    res.json({ status: 'error', result: e });
   }
-})
+});
+
 routes.get("/getExRateVouchers", async(req, res) => {
   try{
     const Charges = await Voucher_Heads.update(
