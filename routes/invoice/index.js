@@ -988,10 +988,11 @@ routes.get("/getOpeningInvoice", async(req, res) => {
 
 routes.post("/deleteOpeningInvoices", async(req, res) => {
   try{
+    console.log(req.headers)
     await Invoice.destroy({where:{id:req.body.headers.id}})
-    const voucher = await Vouchers.findOne({where:{invoice_Id:req.body.headers.id}})
+    const voucher = await Vouchers.findOne({where:{invoice_Id:req.body.headers.id.toString()}})
     await Voucher_Heads.destroy({where:{VoucherId:voucher.dataValues.id}})
-    await Vouchers.destroy({where:{invoice_Id:req.body.headers.id}})
+    await Vouchers.destroy({where:{invoice_Id:req.body.headers.id.toString()}})
     res.json({status: 'success', result: req.body.headers.id});
   }catch(e){
     console.log(e)

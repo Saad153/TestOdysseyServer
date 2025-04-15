@@ -831,12 +831,13 @@ routes.post("/createOpeningBalances", async(req, res) => {
 
   const setVoucherHeads = (id, heads) => {
     let result = [];
+    // console.log(moment.month() < 6)
     heads.forEach((x) => {
       result.push({
         ...x,
         VoucherId: id,
         amount: `${x.amount}`,
-        createdAt:moment().month() < 3 
+        createdAt:moment().month() < 6
         ? moment().subtract(1, 'year').startOf('year').month(5).endOf('month')
         : moment().startOf('year').month(5).endOf('month'),
       });
@@ -852,7 +853,7 @@ routes.post("/createOpeningBalances", async(req, res) => {
     });
     const result = await Vouchers.create({
       ...req.body,
-      createdAt: moment().month() < 3 
+      createdAt: moment().month() < 6
       ? moment().subtract(1, 'year').startOf('year').month(5).endOf('month')
       : moment().startOf('year').month(5).endOf('month'),
       CompanyId:req.body.companyId,
@@ -873,6 +874,7 @@ routes.post("/createOpeningBalances", async(req, res) => {
     res.json({status:'success', result});
   }
   catch (error) {
+    console.log(error)
     res.json({status:'error', result:error});
   }
 });

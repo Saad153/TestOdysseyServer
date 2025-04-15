@@ -244,7 +244,6 @@ routes.post("/voucherEdit", async (req, res) => {
     await Voucher_Heads.destroy({ where: { VoucherId: req.body.id } })
     req.body.Voucher_Heads.forEach(async (x) => {
       const result = await Voucher_Heads.upsert({ ...x, VoucherId: req.body.id, createdAt: req.body.createdAt });
-      // console.log("Result>>", result)
     });
     await res.json({ status: "success" });
   } catch (error) {
@@ -793,7 +792,8 @@ routes.post("/makeTransaction", async(req, res) => {
           exRate: req.body.exRate,
           chequeNo: req.body.checkNo,
           chequeDate: req.body.checkDate,
-          invoices: invoicesList
+          invoices: invoicesList,
+          createdAt: req.body.tranDate
         }, // Data to update
         { where: { id: vID } }      // Query options
       );
