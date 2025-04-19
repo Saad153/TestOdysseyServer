@@ -8,54 +8,51 @@ const basename = path.basename(__filename);
 const env = process.env.NODE_ENV || 'development';
 const config = require(__dirname + '/../config/config.json')[env];
 const db = {};
-const { Client } = require('pg')
-
-// const client = "postgres://postgres:'Saad@645'@localhost:5432/odesy";
 
 let sequelize;
-const client = "postgres://postgres:'Saad@645'@localhost:5432/odesyTest"
-// const connectionString = "postgresql://abdullah:ckn3lCxxtBsWY-65nwfJGA@expert-flapper-2045.7s5.cockroachlabs.cloud:26257/tech_dc_test?sslmode=verify-full"
+if (config.use_env_variable) {
+  sequelize = new Sequelize(process.env[config.use_env_variable], config);
+} else {
+  sequelize = new Sequelize(config.database, config.username, config.password, {
+    host: config.host,
+    dialect: 'mssql', // Change dialect to 'mssql'
+    dialectOptions: {
+      options: {
+        encrypt: true, // Use this if you're on Windows Azure
+      },
+    },
+    logging: false,
+  });
+}
 
-// const connectionString = "postgresql://farrukh:6gHni-AaAZZ7LUw7X5bkHg@boreal-coder-5746.7s5.aws-ap-south-1.cockroachlabs.cloud:26257/dev-server?sslmode=verify-full"
-// const connectionString = "postgresql://farrukh:6gHni-AaAZZ7LUw7X5bkHg@boreal-coder-5746.7s5.aws-ap-south-1.cockroachlabs.cloud:26257/defaultdb?sslmode=verify-full"
-
-// const connectionString = "postgresql://farrukh:6gHni-AaAZZ7LUw7X5bkHg@boreal-coder-5746.7s5.aws-ap-south-1.cockroachlabs.cloud:26257/defaultdb?sslmode=verify-full"
-sequelize = new Sequelize(client, {
-
-
-// const connectionString = "postgresql://abdullah:ckn3lCxxtBsWY-65nwfJGA@expert-flapper-2045.7s5.cockroachlabs.cloud:26257/tech_dc_test?sslmode=verify-full"
-
-// const connectionString = "postgresql://farrukh:6gHni-AaAZZ7LUw7X5bkHg@boreal-coder-5746.7s5.aws-ap-south-1.cockroachlabs.cloud:26257/dev-server?sslmode=verify-full"
-// const connectionString = "postgresql://farrukh:6gHni-AaAZZ7LUw7X5bkHg@boreal-coder-5746.7s5.aws-ap-south-1.cockroachlabs.cloud:26257/defaultdb?sslmode=verify-full"
-// sequelize = new Sequelize(connectionString, {
-  dialectOptions: {
-    application_name: "docs_simplecrud_node-sequelize"
-  },
-  logging:false
-});
-
-fs.readdirSync(__dirname).filter(file => {
-    return (file.indexOf('.') !== 0) && (file !== basename) && (file.slice(-3) === '.js');
-  }).forEach(file => {
-    const model = require(path.join(__dirname, file))(sequelize, Sequelize.DataTypes);
+fs.readdirSync(__dirname)
+  .filter((file) => {
+    return (
+      file.indexOf('.') !== 0 && file !== basename && file.slice(-3) === '.js'
+    );
+  })
+  .forEach((file) => {
+    const model = require(path.join(__dirname, file))(
+      sequelize,
+      Sequelize.DataTypes
+    );
     db[model.name] = model;
   });
 
-Object.keys(db).forEach(modelName => {
-  if(db[modelName].associate) {
-    db[modelName].associate(db)
+Object.keys(db).forEach((modelName) => {
+  if (db[modelName].associate) {
+    db[modelName].associate(db);
   }
 });
 
-// Sync models with the database to create tables
-sequelize.sync({ alter: true })  // alter: true will adjust the schema to match the models, without dropping tables
-  .then(() => {
-    console.log("Database & tables created!");
-  })
-  .catch((err) => {
-    console.error("Error syncing database: ", err);
-  });
-
+// sequelize
+//   .sync({ alter: true })
+//   .then(() => {
+//     console.log('Database & tables created!');
+//   })
+//   .catch((err) => {
+//     console.error('Error syncing database: ', err);
+//   });
 
 db.sequelize = sequelize;
 db.Sequelize = Sequelize;

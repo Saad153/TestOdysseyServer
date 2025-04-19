@@ -1,66 +1,66 @@
-module.exports = (sequelize, DataTypes) => {
-    const Charges = sequelize.define("Charges", {
-        code:{
-            type:DataTypes.INTEGER,
-            allowNull: false,
-            validate:{
-                notEmpty: true
-            }
-        },
-        currency:{
-            type:DataTypes.STRING,
-            allowNull: false,
-            validate:{
-                notEmpty: true
-            }
-        },
-        name:{
-            type:DataTypes.STRING,
-            allowNull: false,
-            validate:{
-                notEmpty: true
-            }
-        },
-        short:{
-            type:DataTypes.STRING,
-            allowNull: false,
-            validate:{
-                notEmpty: true
-            }
-        },
-        calculationType:{
-            type:DataTypes.STRING,
-            allowNull: false,
-            validate:{
-                notEmpty: true
-            }
-        },
-        defaultPaybleParty:{
-            type:DataTypes.STRING,
-            allowNull: false,
-            validate:{
-                notEmpty: true
-            }
-        },
-        defaultRecivableParty:{
-            type:DataTypes.STRING,
-            allowNull: false,
-            validate:{
-                notEmpty: true
-            }
-        },
-        taxApply:{
-            type:DataTypes.STRING,
-            allowNull: false,
-        },
-        taxPerc:{
-            type:DataTypes.STRING,
-            allowNull: false,
-        },
-        fixAmount:{
-            type:DataTypes.DOUBLE,  
-            defaultValue:0.0
-        },
-    })
-    return Charges;
-}
+const Sequelize = require('sequelize');
+module.exports = function(sequelize, DataTypes) {
+  return sequelize.define('Charges', {
+    id: {
+      autoIncrement: true,
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      primaryKey: true
+    },
+    code: {
+      type: DataTypes.INTEGER,
+      allowNull: false
+    },
+    currency: {
+      type: DataTypes.STRING(255),
+      allowNull: false
+    },
+    name: {
+      type: DataTypes.STRING(255),
+      allowNull: false
+    },
+    short: {
+      type: DataTypes.STRING(255),
+      allowNull: false
+    },
+    calculationType: {
+      type: DataTypes.STRING(255),
+      allowNull: false
+    },
+    defaultPaybleParty: {
+      type: DataTypes.STRING(255),
+      allowNull: false
+    },
+    defaultRecivableParty: {
+      type: DataTypes.STRING(255),
+      allowNull: false
+    },
+    taxApply: {
+      type: DataTypes.STRING(255),
+      allowNull: false
+    },
+    taxPerc: {
+      type: DataTypes.STRING(255),
+      allowNull: false
+    },
+    fixAmount: {
+      type: DataTypes.FLOAT,
+      allowNull: true,
+      defaultValue: 0
+    }
+  }, {
+    sequelize,
+    tableName: 'Charges',
+    schema: 'dbo',
+    timestamps: true,
+    indexes: [
+      {
+        name: "PK__Charges__3213E83FD44B7F45",
+        unique: true,
+        fields: [
+          { name: "id" },
+        ]
+      },
+    ]
+  });
+};
