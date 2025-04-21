@@ -637,9 +637,15 @@ routes.post("/saveHeadesNew", async(req, res) => {
 routes.get("/getHeadesNew", async(req, res) => {
   try {
     const result = await Charge_Head.findAll({
-      where:{SEJobId:req.headers.id},
-      include:[{model:Invoice, attributes:['status', 'approved']}]
-    })
+      where: { SEJobId: req.headers.id },
+      include: [
+        {
+          model: Invoice,
+          attributes: ['status', 'approved']
+        }
+      ],
+      order: [['id', 'ASC']] // or 'DESC' if you want descending
+    });
     res.json({status:'success', result});
   }
   catch (error) {

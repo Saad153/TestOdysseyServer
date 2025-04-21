@@ -763,7 +763,8 @@ routes.post("/makeTransaction", async(req, res) => {
         tranDate: req.body.tranDate,
         subType: req.body.subType,
         CompanyId: req.body.companyId,
-        voucherNarration: req.body.narration
+        voucherNarration: req.body.narration,
+        createdAt: req.body.tranDate
       }
       const lastVoucher = await Vouchers.findOne({
         where: {

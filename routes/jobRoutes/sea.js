@@ -262,31 +262,79 @@ routes.post("/create", async(req, res) => {
   }
 });
 
-routes.post("/edit", async(req, res) => {
-    const createEquip = (list, id) => {
-        let result = [];
-        list.forEach((x)=>{
-            if(x.size!=''&&x.qty!='', x.dg!='', x.teu!=''){
-                delete x.id
-                result.push({...x, SEJobId:id, teu:`${x.teu}`})
-            }
-        })
-        return result;
+// routes.post("/edit", async(req, res) => {
+//     const createEquip = (list, id) => {
+//         let result = [];
+//         list.forEach((x)=>{
+//             if(x.size!=''&&x.qty!='', x.dg!='', x.teu!=''){
+//                 delete x.id
+//                 result.push({...x, SEJobId:id, teu:`${x.teu}`})
+//             }
+//         })
+//         return result;
+//     }
+//     try {
+//         let data = req.body.data
+//         data.customCheck = data.customCheck.toString();
+//         data.transportCheck = data.transportCheck.toString();
+//         data.approved = data.approved.toString();
+//         const check = await SE_Job.findOne({
+//           where: {
+//             id: data.id
+//           }
+//         })
+//         if(check.dataValues.approved){
+//           res.json({status:'approved', result:await getJob(data.id)});
+//         }
+//         await SE_Job.update(data,{where:{id:data.id}}).catch((x)=>console.log(1));
+//         await SE_Equipments.destroy({where:{SEJobId:data.id}}).catch((x)=>console.log(2))
+//         await SE_Equipments.bulkCreate(createEquip(data.equipments, data.id)).catch((x)=>console.log(x))
+//         res.json({status:'success', result:await getJob(data.id)});
+//     }  
+//     catch (error) {
+//         console.log(error)
+//       res.json({status:'error', result:error.message});
+//     }
+// });
+
+routes.post("/edit", async (req, res) => {
+  const createEquip = (list, id) => {
+    let result = [];
+    list.forEach((x) => {
+      if (x.size != "" && x.qty != "" && x.dg != "" && x.teu != "") {
+        delete x.id;
+        result.push({ ...x, SEJobId: id, teu: `${x.teu}` });
+      }
+    });
+    return result;
+  };
+
+  try {
+    let data = req.body.data;
+    data.customCheck = data.customCheck.toString();
+    data.transportCheck = data.transportCheck.toString();
+    data.approved = data.approved.toString();
+
+    const check = await SE_Job.findOne({
+      where: {
+        id: data.id,
+      },
+    });
+
+    if (check.dataValues.approved == 'true') {
+      return res.json({ status: "approved", result: await getJob(data.id) });
     }
-    try {
-        let data = req.body.data
-        data.customCheck = data.customCheck.toString();
-        data.transportCheck = data.transportCheck.toString();
-        data.approved = data.approved.toString();
-        await SE_Job.update(data,{where:{id:data.id}}).catch((x)=>console.log(1));
-        await SE_Equipments.destroy({where:{SEJobId:data.id}}).catch((x)=>console.log(2))
-        await SE_Equipments.bulkCreate(createEquip(data.equipments, data.id)).catch((x)=>console.log(x))
-        res.json({status:'success', result:await getJob(data.id)});
-    }  
-    catch (error) {
-        console.log(error.message)
-      res.json({status:'error', result:error.message});
-    }
+
+    await SE_Job.update(data, { where: { id: data.id } }).catch((x) => console.log(1));
+    await SE_Equipments.destroy({ where: { SEJobId: data.id } }).catch((x) => console.log(2));
+    await SE_Equipments.bulkCreate(createEquip(data.equipments, data.id)).catch((x) => console.log(x));
+
+    return res.json({ status: "success", result: await getJob(data.id) });
+
+  } catch (error) {
+    console.log(error);
+    return res.json({ status: "error", result: error.message });
+  }
 });
 
 routes.get("/get", async(req, res) => {
@@ -632,9 +680,15 @@ routes.get("/getStamps", async(req, res) => {
 
 routes.post("/deleteJob", async(req, res) => {
   try {
+    await Bl.destroy({
+      where:{
+        SEJobId: req.body.id
+      }
+    })
     const result = await SE_Job.destroy({
       where:{id:req.body.id},
     });
+    
     res.json({status:'success', result:result});
   }
   catch (error) {

@@ -120,6 +120,14 @@ routes.post("/createClient", async(req, res) => {
         value.docRepresentatorId = value.docRepresentatorId==""?null:value.docRepresentatorId;
         value.authorizedById = value.authorizedById==""?null:value.authorizedById;
         console.log(value)
+        const check2 = await Clients.findOne({
+            where: {
+                name: value.name
+            }
+        })
+        if(check2){
+            res.json({status:'exists', message:"Client Already Exists"});
+        }
         const result = await Clients.create({...value, code : parseInt(check.code) + 1 })   
         // console.log(result)
         
@@ -135,7 +143,7 @@ routes.post("/createClient", async(req, res) => {
     }
     catch (error) {
         console.error(error)
-      res.json({status:'error', result:error});
+        res.json({status:'error', result:error});
     }
 });
 
@@ -213,7 +221,7 @@ routes.post("/editClient", async(req, res) => {
               where: { title: { [Op.or]: [`${req.body.pAccountName}`] } }
             });
             const accountsList = await Child_Account.bulkCreate(await createChildAccounts(accounts, value.name));
-            await clientAssociation.bulkCreate(createAccountList(accounts, accountsList, value.id)).catch((x)=>console.log(x))
+            // await clientAssociation.bulkCreate(createAccountList(accounts, accountsList, value.id)).catch((x)=>console.log(x))
         } else {
             clientAssociation.forEach(async(x)=>{
                 ids.push(x.ChildAccountId);
@@ -225,6 +233,7 @@ routes.post("/editClient", async(req, res) => {
         res.json({status:'success'});
     }
     catch (error) {
+        console.error(error)
       res.json({status:'error', result:error});
     }
 });

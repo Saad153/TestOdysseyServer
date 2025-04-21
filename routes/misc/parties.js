@@ -65,7 +65,7 @@ routes.get(`/${url}/getPartiesbyType`, async (req, res) => {
         }
       })
     }
-    // console.log("Result Length: ",result.dataValues.length)
+    // console.log("Result Length: ",result.length)
     res.json({status:'success', result:result});
   }catch(e){
     console.log(e)

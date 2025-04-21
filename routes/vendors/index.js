@@ -104,6 +104,14 @@ routes.post("/create", async(req, res) => {
         });
         value.accountRepresentatorId = value.accountRepresentatorId==""?null:value.accountRepresentatorId;
         value.authorizedById = value.authorizedById==""?null:value.authorizedById;
+        const check2 = await Vendors.findOne({
+            where: {
+                name: value.name
+            }
+        })
+        if(check2){
+            res.json({status:'exists', message:"Vendor Already Exists"});
+        }
         const result = await Vendors.create({...value, code: parseInt(check.code) + 1});
         const accounts = await Parent_Account.findAll({
             where: {
