@@ -1127,5 +1127,57 @@ routes.post("/createClientInBulk", async(req, res) => {
     res.json({status:'error', result:error});
   }
 });
+routes.post("/importAccounts", async(req, res) => {
+  try{
+    let obj = req.body;
+    const accounts = await Accounts.findAll()
+    for(let x of obj.pAccounts){
+      let parentId = 0
+      accounts.forEach((y) => {
+        if(x.Parent.AccountName==y.title){
+          parentId = y.id
+        }
+      })
+      let temp = {
+        title:x.AccountName,
+        editable: 0,
+        AccountId: parentId,
+      }
+      await Parent_Account.create({
+        ...temp,
+        CompanyId: 1
+      })
+      await Parent_Account.create({
+        ...temp,
+        CompanyId: 3
+      })
+    }
+
+    const pAccounts = await Parent_Account.findAll()
+
+    for(let x of obj.cAccounts){
+      let parentId = 0
+      for(let y of pAccounts){
+        // console.log(x.Parent.AccountName, y.title)
+        if(x.Parent.AccountName==y.title){
+          parentId = y.id
+          let temp = {
+            title:x.AccountName,
+            editable: 0,
+            subCategory: x.SubCategory?x.SubCategory.SubCategory:"General",
+            ParentAccountId: parentId,
+          }
+          await Child_Account.create({
+            ...temp,
+          })
+        }
+      }
+    }
+    res.json({status:'success'});
+  }catch(error){
+    console.error(error)
+    res.json({status:'error', result:error});
+  }
+})
 
 module.exports = routes;

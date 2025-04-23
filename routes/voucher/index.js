@@ -995,4 +995,305 @@ routes.get("/getExRateVouchers", async(req, res) => {
   }
 })
 
+routes.post("/importVouchers", async (req, res) => {
+  try {
+
+    const extractNumber = (str) => {
+      const match = str.match(/^(?:[^-]*-){2}(\d+)\//);
+      return match ? match[1] : null;
+    };
+
+    const extractBetweenDashes = (str) => {
+      const match = str.match(/^[^-]+-([^-]+)-/);
+      return match ? match[1] : null;
+  };
+
+    // console.log(req.body)
+
+    const accounts = await Child_Account.findAll({ include: Parent_Account });
+    const accountMap = new Map();
+    accounts.forEach((a) => {
+      const companyId = a.Parent_Account?.CompanyId;
+      if (companyId) {
+        accountMap.set(`${a.title}-${companyId}`, { id: a.id, subCategory: a.subCategory });
+      }
+    });
+    let processedInvoices = []
+    for(let invoice of req.body){
+      // console.log(invoice)
+      accounts.forEach((account) => {
+        if (invoice.voucher.Voucher_Heads[0].GL_COA.AccountName == account.title && account.Parent_Account.CompanyId == (invoice.InvoiceNumber.includes("SNS") ? 1 : 3)) {
+          invoice.party_Id = account.id;
+          invoice.party_Name = account.title;
+        }
+      })
+      let invType = extractBetweenDashes(invoice.InvoiceNumber)
+      switch (invType) {
+        case "OJI":
+          invType = "Old Job Invoice"
+          break;
+        case "OJB":
+          invType = "Old Job Bill"
+          break;
+        case "OA":
+          invType = "Agent Invoice"
+          break;
+        case "JI":
+          invType = "Job Invoice"
+          break;
+        case "JB":
+          invType = "Job Bill"
+          break;
+        case "AI":
+          invType = "Agent Invoice"
+          break;
+      }
+      let inv = {
+        invoice_No: invoice.InvoiceNumber,
+        invoice_Id: extractNumber(invoice.InvoiceNumber),
+        type: invType,
+        payType: invoice.InvoiceTypeId == 1 ? "Recievable" : "Payble",
+        status: 1,
+        operation: "SE",
+        currency: invoice.GL_Currencies?invoice.GL_Currencies.CurrencyCode:"PKR",
+        ex_rate: invoice.ExchangeRate,
+        party_Id: invoice.party_Id,
+        party_Name: invoice.party_Name,
+        paid: '0',
+        recieved: '0',
+        total: invoice.InvoiceAmount,
+        approved: '1',
+        companyId: invoice.InvoiceNumber.includes("SNS") ? 1 : 3,
+        partyType: invoice.voucher.GL_COA.GL_COASubCategory?invoice.voucher.GL_COA.GL_COASubCategory.SubCategory:"client",
+        SEJobId: 14
+      };
+      // processedInvoices.push(inv)
+      const result = await Invoice.create(inv);
+        let voucher = {
+        voucher_No: invoice.voucher.VoucherNo.split("-")[2].split("/")[0].replace(/^0+/, ""),
+        voucher_Id: invoice.voucher.VoucherNo,
+        type: invoice.voucher.GL_VoucherType.VoucherType,
+        vType: invoice.voucher.GL_VoucherType.TypeCode,
+        currency: invoice.voucher.GL_Currencies?.CurrencyCode ?? "PKR",
+        exRate: invoice.voucher.ExchangeRate,
+        costCenter: "KHI",
+        invoice_Id: result.dataValues.id,
+        partyId: invoice.party_Id,
+        partyName: invoice.party_Name,
+        partyType: invoice.voucher.GL_COA.GL_COASubCategory?invoice.voucher.GL_COA.GL_COASubCategory.SubCategory:"client",
+        CompanyId: invoice.InvoiceNumber.includes("SNS") ? 1 : 3,
+        voucherNarration: invoice.voucher.Narration,
+      };
+      const check1 = await Vouchers.findOne({
+        where: {
+          voucher_Id: voucher.voucher_Id
+        }
+      })
+      let result1
+      if(check1){
+        // console.log("Voucher Already Exists")
+      }else{
+        const temp = await Vouchers.create(voucher);
+        result1 = temp.dataValues.id
+        for (let vh of invoice.voucher.Voucher_Heads) {
+          let CAID = 0;
+          let type = vh.CreditLC !== 0 ? "credit" : "debit";
+          accounts.forEach((account) => {
+            if (vh.GL_COA.AccountName == account.title && account.Parent_Account.CompanyId == (invoice.InvoiceNumber.includes("SNS") ? 1 : 3)) {
+              CAID = account.id;
+            }
+          })
+  
+          let voucher_head = {
+            defaultAmount: type === "debit" ? vh.DebitLC : vh.CreditLC,
+            amount: type === "debit" ? vh.DebitVC : vh.CreditVC,
+            type: type,
+            narration: invoice.voucher.Narration,
+            accountType: invoice.voucher.GL_COA.GL_COASubCategory?invoice.voucher.GL_COA.GL_COASubCategory.SubCategory:"client",
+            VoucherId: result1,
+            ChildAccountId: CAID
+          }
+  
+          const result2 = await Voucher_Heads.create(voucher_head)
+  
+        }
+      }
+
+      if(invoice.InvAdjustments && invoice.InvAdjustments.length > 0){
+        for(let adj of invoice.InvAdjustments){
+          let v = adj.voucher
+          // console.log("Adj Voucher: ", v.VoucherNo)
+          const check = await Vouchers.findOne({
+            where: {
+              voucher_Id: v.VoucherNo
+            }
+          })
+          if(check){
+            const invTran = await Invoice_Transactions.create({
+              gainLoss: '0',
+              amount: adj.Amount,
+              InvoiceId: result.dataValues.id,
+              VoucherId: check.dataValues.id
+            })
+            let temp = check.dataValues.invoices
+            check.update({
+              invoices: `${result.dataValues.id}, ${temp}`
+            })
+          }else{
+  
+            let voucher = {
+              voucher_No: v.VoucherNo.split("-")[2].split("/")[0].replace(/^0+/, ""),
+              voucher_Id: v.VoucherNo,
+              type: v.GL_VoucherType.VoucherType.includes("RECEIPT")?"JOB RECEIPT":"JOB PAYMENT",
+              vType: v.GL_VoucherType.TypeCode,
+              currency: v.GL_Currencies?.CurrencyCode ?? "PKR",
+              exRate: v.ExchangeRate,
+              costCenter: "KHI",
+              invoices: result.dataValues.id,
+              partyId: invoice.party_Id,
+              partyName: invoice.party_Name,
+              partyType: v.GL_COA.GL_COASubCategory.SubCategory,
+              CompanyId: invoice.InvoiceNumber.includes("SNS") ? 1 : 3,
+              voucherNarration: v.Narration,
+            };
+            const result3 = await Vouchers.create(voucher);
+            const invTran = await Invoice_Transactions.create({
+              gainLoss: '0',
+              amount: adj.Amount,
+              InvoiceId: result.dataValues.id,
+              VoucherId: result3.dataValues.id
+            })
+            let rec = parseFloat(result.dataValues.recieved) || 0;
+            let pa = parseFloat(result.dataValues.paid) || 0;
+            const adjAmount = parseFloat(adj.Amount) || 0;
+            console.log("Ajdustment Amount: ", adjAmount)
+            if (result.dataValues.payType == "Payble") {
+              pa += adjAmount;
+            } else {
+              rec += adjAmount;
+            }
+            console.log("Updated values → rec:", rec, "pa:", pa);
+
+            await result.update({
+              paid: pa,
+              recieved: rec
+            });
+            for (let vh of v.Voucher_Heads) {
+              let CAID = 0;
+              let type = vh.CreditLC !== 0 ? "credit" : "debit";
+      
+              const accountKey = `${vh.GL_COA?.AccountName}-${v.Gen_SubCompanies?.ShortName === "SNS" ? 1 : 3}`;
+              if (accountMap.has(accountKey)) {
+                CAID = accountMap.get(accountKey).id;
+              } else {
+                console.log(`No matching account for voucher head: ${vh.GL_COA?.AccountName}`);
+              }
+      
+              let voucher_head = {
+                defaultAmount: type === "debit" ? vh.DebitLC : vh.CreditLC,
+                amount: type === "debit" ? vh.DebitVC : vh.CreditVC,
+                type: type,
+                narration: v.Narration,
+                accountType: v.GL_COA.GL_COASubCategory.SubCategory,
+                VoucherId: result3.dataValues.id,
+                ChildAccountId: CAID
+              }
+      
+              const result4 = await Voucher_Heads.create(voucher_head)
+              // result4?console.log(result4.dataValues):null
+      
+            }
+          }
+        }
+      }
+
+      processedInvoices.push(result.dataValues)
+    }
+
+    res.json({ status: "success", result: processedInvoices });
+  } catch (e) {
+    console.error("Error in importVouchers:", e);
+    res.status(500).json({ status: "error", result: e });
+  }
+});
+
+routes.post("/importV", async (req, res) => {
+  try{
+    const accounts = await Child_Account.findAll({ include: Parent_Account });
+    const accountMap = new Map();
+    accounts.forEach((a) => {
+      const companyId = a.Parent_Account?.CompanyId;
+      if (companyId) {
+        accountMap.set(`${a.title}-${companyId}`, { id: a.id, subCategory: a.subCategory });
+      }
+    });
+    for (let voucher of req.body) {
+      let party_Id = 0;
+      let party_Name = "";
+    
+      const companyId = voucher.VoucherNo.includes("SNS") ? 1 : 3;
+      const headCOA = voucher.Voucher_Heads[0].GL_COA;
+      
+      accounts.forEach((account) => {
+        if (headCOA?.AccountName === account.title && account.Parent_Account?.CompanyId === companyId) {
+          party_Id = account.id;
+          party_Name = account.title;
+        }
+      });
+    
+      try {
+        // console.log(voucher.VoucherNo);
+        let v = {
+          voucher_No: voucher.VoucherNo.split("-")[2].split("/")[0].replace(/^0+/, ""),
+          voucher_Id: voucher.VoucherNo,
+          type: voucher.GL_VoucherType.VoucherType,
+          vType: voucher.GL_VoucherType.TypeCode,
+          currency: voucher.GL_Currencies?.CurrencyCode ?? "PKR",
+          exRate: voucher.ExchangeRate,
+          costCenter: "KHI",
+          partyId: party_Id,
+          partyName: party_Name,
+          partyType: headCOA?.GL_COASubCategory?.SubCategory || "client",
+          CompanyId: companyId,
+          voucherNarration: voucher.Narration,
+        };
+    
+        const result3 = await Vouchers.create(v);
+    
+        for (let vh of voucher.Voucher_Heads) {
+          let CAID = 0;
+          const type = vh.CreditLC !== 0 ? "credit" : "debit";
+    
+          const accountKey = `${vh.GL_COA?.AccountName}-${companyId}`;
+          if (accountMap.has(accountKey)) {
+            CAID = accountMap.get(accountKey).id;
+          } else {
+            console.warn(`⚠️ No matching account for: ${vh.GL_COA?.AccountName}`);
+          }
+    
+          const voucher_head = {
+            defaultAmount: type === "debit" ? vh.DebitLC : vh.CreditLC,
+            amount: type === "debit" ? vh.DebitVC : vh.CreditVC,
+            type,
+            narration: voucher.Narration,
+            accountType: headCOA?.GL_COASubCategory?.SubCategory || "client",
+            VoucherId: result3.dataValues.id,
+            ChildAccountId: CAID,
+          };
+    
+          await Voucher_Heads.create(voucher_head);
+        }
+      } catch (e) {
+        console.error("❌ Failed to import voucher:", voucher.VoucherNo, e);
+      }
+    }
+    
+    res.status(200).json({ status: "success", message: "All vouchers imported." });
+    
+  }catch(e){
+    console.error("Error", e)
+    res.status(500).json({ status: "error", result: e})
+  }
+});
+
 module.exports = routes;

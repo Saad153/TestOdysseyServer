@@ -72,4 +72,17 @@ routes.get("/get", async(req, res) => {
   }
 });
 
+routes.post("/bulkCreate", async(req, res) => {
+  try {
+    console.log(req.body)
+    let data = req.body
+    await Charges.bulkCreate(data);
+    res.json({status:'success' })
+  }
+  catch (error) {
+    console.log(error)
+    res.json({status:'error', result:error});
+  }
+});
+
 module.exports = routes;
