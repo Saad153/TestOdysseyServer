@@ -982,4 +982,41 @@ routes.get("/getawb", async(req, res) => {
   }
 });
 
+routes.post("/getCounts", async (req, res) => {
+  try {
+    let data = req.body.data;
+    let temp = []
+    console.log("First Job ID:", data[0]); // or console.log("Data:", data);
+    for(let job of data){
+      const charges = await Charge_Head.findAll({
+        where: {
+          SEJobId: job.id
+        }
+      })
+      let iLength = 0
+      let bLength = 0
+      charges.forEach((charge) => {
+        console.log("Invoice No: ", charge.dataValues.invoice_id)
+        // charge.dataValues.invoice_id != null? length++: null
+        if(charge.dataValues.invoice_id != null){
+          charge.dataValues.invoice_id.includes("I")?iLength++: null
+          charge.dataValues.invoice_id.includes("B")?bLength++: null
+        }
+      })
+      console.log(iLength, bLength)
+      temp.push({
+        ...job,
+        iLength: iLength,
+        bLength: bLength
+      })
+    }
+
+
+    return res.json({ status: "success", result: temp });
+  } catch (e) {
+    console.error(e);
+    return res.json({ status: "error", result: e.toString() });
+  }
+});
+
 module.exports = routes;
