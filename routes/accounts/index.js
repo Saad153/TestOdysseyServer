@@ -740,6 +740,39 @@ routes.get("/getLedger", async(req, res) => {
     const childAccountCondition = req.headers.id!='undefined'
       ? { ChildAccountId: req.headers.id }
       : { ChildAccountId: { [Op.ne]: null } };
+      
+    // const toDateMoment = moment(req.headers.to, "DD-MM-YYYY", true);
+
+    // if (!toDateMoment.isValid()) {
+    //   return res.status(400).json({ status: 'error', message: 'Invalid to date' });
+    // }
+
+    // const result = await Voucher_Heads.findAll({
+    //   raw: true,
+    //   where: {
+    //     ...childAccountCondition,
+    //     createdAt: {
+    //       [Op.lte]: toDateMoment.add(1, "days").toDate(),
+    //     },
+    //   },
+    //   attributes: ['amount', 'type', 'narration', 'createdAt', 'defaultAmount', 'accountType'],
+    //   include: [
+    //     {
+    //       model: Vouchers,
+    //       attributes: ['voucher_Id', 'id', 'type', 'currency', 'exRate', 'vType', 'chequeNo', 'chequeDate'],
+    //       where: {
+    //         ...currencyCondition,
+    //         CompanyId: req.headers.company,
+    //       },
+    //     },
+    //     {
+    //       model: Child_Account,
+    //       attributes: ['title'],
+    //     },
+    //   ],
+    //   order: [["createdAt", "ASC"]],
+    // });
+
     const result = await Voucher_Heads.findAll({
       raw:true,
       where:{
@@ -752,7 +785,7 @@ routes.get("/getLedger", async(req, res) => {
       attributes:['amount', 'type', 'narration', 'createdAt', 'defaultAmount', 'accountType'],
       include:[{
         model:Vouchers,
-        attributes:['voucher_Id', 'id', 'type', 'currency', 'exRate', 'vType'],
+        attributes:['voucher_Id', 'id', 'type', 'currency', 'exRate', 'vType', 'chequeNo', 'chequeDate'],
         where:{
           ...currencyCondition,
           CompanyId: req.headers.company,
@@ -764,6 +797,7 @@ routes.get("/getLedger", async(req, res) => {
       }],
       order:[["createdAt","ASC"]],
     })
+    
     res.json({status:'success', result:result});
   } catch (error) {
     console.log(error)
@@ -831,7 +865,6 @@ routes.post("/createOpeningBalances", async(req, res) => {
 
   const setVoucherHeads = (id, heads) => {
     let result = [];
-    // console.log(moment.month() < 6)
     heads.forEach((x) => {
       result.push({
         ...x,
@@ -874,7 +907,6 @@ routes.post("/createOpeningBalances", async(req, res) => {
     res.json({status:'success', result});
   }
   catch (error) {
-    console.log(error)
     res.json({status:'error', result:error});
   }
 });

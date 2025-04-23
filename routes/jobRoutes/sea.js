@@ -41,7 +41,7 @@ routes.get("/getValues", async(req, res) => {
       }
       if(x.types.includes('Shipping Line')){
         // console.log(x)
-        finalResult.sLine.push({name:`${x.name} (${x.code})`, id:parseInt(x.id), types:x.types})
+        finalResult.sLine.push({name:`${x.name} (${x.code})`, id:x.id, types:x.types})
       }
     })
     let tempClient = [];
@@ -243,7 +243,7 @@ routes.post("/create", async(req, res) => {
     } else {
       data.airLineId=null
     }
-    console.log("Data Operation:",data)
+    console.log("Data Operation:",data.operation)
     const check = await SE_Job.findOne({
       order:[['jobId','DESC']], attributes:["jobId"],
       where:{operation:data.operation, companyId:data.companyId.toString()}
@@ -320,7 +320,7 @@ routes.post("/edit", async (req, res) => {
         id: data.id,
       },
     });
-
+    console.log("Data Approved: ", data.approved)
     if (check.dataValues.approved == 'true') {
       return res.json({ status: "approved", result: await getJob(data.id) });
     }

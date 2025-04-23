@@ -6,18 +6,13 @@ const { History } = require("../../functions/Associations/historyAssociations");
 const { Employees } = require("../../functions/Associations/employeeAssociations");
 const { Clients, Client_Associations } = require("../../functions/Associations/clientAssociation");
 const { Child_Account, Parent_Account } = require("../../functions/Associations/accountAssociations");
+const { Voucher_Heads } = require('../../functions/Associations/voucherAssociations');
 
-const createChildAccounts = async (list, name) => {
+const createChildAccounts = (list, name) => {
     let result = [];
-    for(let x of list){
-        const childs = await Child_Account.findOne({
-            where: {
-                ParentAccountId: x.id
-            },
-            order: [[Sequelize.literal('CAST("code" AS INTEGER)'), 'DESC']]
-        });        
-        result.push({title:name, ParentAccountId:x.id, subCategory:'Customer', code: childs?(parseInt(childs.dataValues.code)+1).toString():(x.code+"0001")})
-    }
+    list.forEach((x)=>{
+        result.push({title:name, ParentAccountId:x.id, subCategory:'Customer'})
+    })
     return result;
 }
 const createAccountList = (parent, child, id) => {
@@ -126,7 +121,7 @@ routes.post("/createClient", async(req, res) => {
             }
         })
         if(check2){
-            res.json({status:'exists', message:"Client Already Exists"});
+            return res.json({status:'exists', message:"Client Already Exists"});
         }
         const result = await Clients.create({...value, code : parseInt(check.code) + 1 })   
         // console.log(result)
@@ -134,7 +129,7 @@ routes.post("/createClient", async(req, res) => {
         const accounts = await Parent_Account.findAll({
             where: { title: { [Op.or]: [`${req.body.pAccountName}`] } }
         });
-        const accountsList = await Child_Account.bulkCreate(await createChildAccounts(accounts, result.name));
+        const accountsList = await Child_Account.bulkCreate(createChildAccounts(accounts, result.name));
         await Client_Associations.bulkCreate(createAccountList(accounts, accountsList, result.id));
         res.json({
             status:'success', 
@@ -424,5 +419,79 @@ routes.get("/getClientAssociations", async(req, res) => {
         res.json({status:'error', result:error});
     }
 });
+
+routes.post("/deleteClient", async(req, res) => {
+    try{
+        console.log("Delete Client:", req.body.id)
+        let clientId = req.body.id
+        const result0 = await Clients.findOne({where: {
+            id: clientId
+        }})
+        if(result0){
+            const result1 = await Client_Associations.findOne({
+                where: {
+                    ClientId: result0.dataValues.id
+                }
+            })
+            if(result1){
+                const result2 = await Child_Account.findOne({
+                    where: {
+                        id: result1.dataValues.ChildAccountId
+                    }
+                })
+                if(result2){
+                    const result3 = await Voucher_Heads.findOne({
+                        where: {
+                            ChildAccountId: result2.dataValues.id
+                        }
+                    })
+                    if(result3){
+                        return res.json({status: 'transaction'})
+                    } else {
+                        await Child_Account.destroy({
+                            where: {
+                                id: result2.dataValues.id
+                            }
+                        })
+                        await Client_Associations.destroy({
+                            where: {
+                                id: result1.dataValues.id
+                            }
+                        })
+                        await Clients.destroy({
+                            where: {
+                                id: result0.dataValues.id
+                            }
+                        })
+                    }
+                } else {
+                    await Client_Associations.destroy({
+                        where: {
+                            id: result1.dataValues.id
+                        }
+                    })
+                    await Clients.destroy({
+                        where: {
+                            id: result0.dataValues.id
+                        }
+                    })
+                }
+            } else {
+                await Clients.destroy({
+                    where: {
+                        id: result0.dataValues.id
+                    }
+                })
+            }
+        } else {
+            return res.json({status: 'deleted'})
+        }
+        console.log(result0.dataValues)
+        res.json({status: 'success'})
+    }catch(e){
+        console.error(e)
+        res.json({status: 'error', message: e})
+    }
+})
 
 module.exports = routes;

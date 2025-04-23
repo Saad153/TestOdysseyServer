@@ -656,7 +656,7 @@ routes.get("/getHeadesNew", async(req, res) => {
 // This function is used in the API below helps to set invoice number according to the last generated invoice with fiscal year
 const createInvoices = async (lastJB, init, type, companyId, operation, x) => {
   try{
-    console.log("Make Transaction:",x)
+    // console.log("Make Transaction:",x)
     let company = '';
     let inVoiceDeleteList = []
     let account = await Client_Associations.findOne({
@@ -994,11 +994,10 @@ routes.get("/getOpeningInvoice", async(req, res) => {
 
 routes.post("/deleteOpeningInvoices", async(req, res) => {
   try{
-    console.log(req.headers)
     await Invoice.destroy({where:{id:req.body.headers.id}})
-    const voucher = await Vouchers.findOne({where:{invoice_Id:req.body.headers.id.toString()}})
+    const voucher = await Vouchers.findOne({where:{invoice_Id:req.body.headers.id}})
     await Voucher_Heads.destroy({where:{VoucherId:voucher.dataValues.id}})
-    await Vouchers.destroy({where:{invoice_Id:req.body.headers.id.toString()}})
+    await Vouchers.destroy({where:{invoice_Id:req.body.headers.id}})
     res.json({status: 'success', result: req.body.headers.id});
   }catch(e){
     console.log(e)
@@ -1026,15 +1025,15 @@ routes.get("/getInvoices", async(req, res) =>{
 
 routes.post("/unApprove", async(req, res)=>{
   try{
-    console.log(req.body.id)
+    console.log(typeof(req.body.id))
     const inv = await Invoice.update(
       { approved: 0 },
-      { where: { id: req.body.id.toString() } } // Replace someInvoiceId with the actual ID or condition
+      { where: { id: req.body.id } } // Replace someInvoiceId with the actual ID or condition
     );
     
     const voucher = await Vouchers.findOne({
-      where:{
-        invoice_Id: req.body.id.toString()
+      where: {
+        invoice_Id: String(req.body.id)
       }
     })
     const voucher_Heads = await Voucher_Heads.destroy({
@@ -1043,8 +1042,8 @@ routes.post("/unApprove", async(req, res)=>{
       }
     })
     await Vouchers.destroy({
-      where:{
-        invoice_Id: req.body.id.toString()
+      where: {
+        invoice_Id: String(req.body.id)
       }
     })
     res.json({status: 'success'});

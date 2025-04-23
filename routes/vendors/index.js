@@ -26,25 +26,11 @@ const createAccountList = (parent, child, id) => {
     return result;
 }
 
-// const createChildAccounts = (list, name) => {
-//     let result = [];
-//     list.forEach((x)=>{
-//         result.push({title:name, ParentAccountId:x.id, subCategory:'Vendor'})
-//     });
-//     return result;
-// }
-
-const createChildAccounts = async (list, name) => {
+const createChildAccounts = (list, name) => {
     let result = [];
-    for(let x of list){
-        const childs = await Child_Account.findOne({
-            where: {
-                ParentAccountId: x.id
-            },
-            order: [[Sequelize.literal('CAST("code" AS INTEGER)'), 'DESC']]
-        });        
-        result.push({title:name, ParentAccountId:x.id, subCategory:'Vendor', code: childs?(parseInt(childs.dataValues.code)+1).toString():(x.code+"0001")})
-    }
+    list.forEach((x)=>{
+        result.push({title:name, ParentAccountId:x.id, subCategory:'Vendor'})
+    });
     return result;
 }
 
@@ -110,7 +96,7 @@ routes.post("/create", async(req, res) => {
             }
         })
         if(check2){
-            res.json({status:'exists', message:"Vendor Already Exists"});
+            return res.json({status:'exists', message:"Vendor Already Exists"});
         }
         const result = await Vendors.create({...value, code: parseInt(check.code) + 1});
         const accounts = await Parent_Account.findAll({
@@ -119,7 +105,7 @@ routes.post("/create", async(req, res) => {
                 title: { [Op.or]: [`${req.body.pAccountName}`] }
             }
         });
-        const accountsList = await Child_Account.bulkCreate(await createChildAccounts(accounts, result.name));
+        const accountsList = await Child_Account.bulkCreate(createChildAccounts(accounts, result.name));
         await Vendor_Associations.bulkCreate(createAccountList(accounts, accountsList, result.id)).catch((x)=>console.log(x))
         res.json({
             status:'success', 
@@ -155,7 +141,7 @@ routes.post("/edit", async(req, res) => {
                 title: { [Op.or]: [`${req.body.pAccountName}`] }
               }
             });
-            const accountsList = await Child_Account.bulkCreate(await createChildAccounts(accounts, value.name));
+            const accountsList = await Child_Account.bulkCreate(createChildAccounts(accounts, value.name));
             await Vendor_Associations.bulkCreate(createAccountList(accounts, accountsList, value.id)).catch((x)=>console.log(x))
         } else {
             console.log("Vendor Associations")
@@ -273,5 +259,79 @@ routes.get("/getVendorAssociations", async(req, res) => {
       res.json({status:'error', result:error});
     }
 });
+
+routes.post("/deleteVendor", async(req, res) => {
+    try{
+        console.log("Delete Vendor:", req.body.id)
+        let vendorId = req.body.id
+        const result0 = await Vendors.findOne({where: {
+            id: vendorId
+        }})
+        if(result0){
+            const result1 = await Vendor_Associations.findOne({
+                where: {
+                    VendorId: result0.dataValues.id
+                }
+            })
+            if(result1){
+                const result2 = await Child_Account.findOne({
+                    where: {
+                        id: result1.dataValues.ChildAccountId
+                    }
+                })
+                if(result2){
+                    const result3 = await Voucher_Heads.findOne({
+                        where: {
+                            ChildAccountId: result2.dataValues.id
+                        }
+                    })
+                    if(result3){
+                        return res.json({status: 'transaction'})
+                    } else {
+                        await Child_Account.destroy({
+                            where: {
+                                id: result2.dataValues.id
+                            }
+                        })
+                        await Vendor_Associations.destroy({
+                            where: {
+                                id: result1.dataValues.id
+                            }
+                        })
+                        await Vendors.destroy({
+                            where: {
+                                id: result0.dataValues.id
+                            }
+                        })
+                    }
+                } else {
+                    await Vendor_Associations.destroy({
+                        where: {
+                            id: result1.dataValues.id
+                        }
+                    })
+                    await Vendors.destroy({
+                        where: {
+                            id: result0.dataValues.id
+                        }
+                    })
+                }
+            } else {
+                await Vendors.destroy({
+                    where: {
+                        id: result0.dataValues.id
+                    }
+                })
+            }
+        } else {
+            return res.json({status: 'deleted'})
+        }
+        console.log(result0.dataValues)
+        res.json({status: 'success'})
+    }catch(e){
+        console.error(e)
+        res.json({status: 'error', message: e})
+    }
+})
 
 module.exports = routes;
