@@ -993,16 +993,25 @@ routes.post("/getCounts", async (req, res) => {
           SEJobId: job.id
         }
       })
-      let iLength = 0
-      let bLength = 0
-      charges.forEach((charge) => {
-        console.log("Invoice No: ", charge.dataValues.invoice_id)
-        // charge.dataValues.invoice_id != null? length++: null
-        if(charge.dataValues.invoice_id != null){
-          charge.dataValues.invoice_id.includes("I")?iLength++: null
-          charge.dataValues.invoice_id.includes("B")?bLength++: null
+      const invoiceSet = new Set();
+      const billSet = new Set();
+
+      let iLength = 0;
+      let bLength = 0;
+
+      charges.forEach(charge => {
+        const invoiceId = charge.dataValues.invoice_id;
+        if (invoiceId) {
+          if (invoiceId.includes("I") && !invoiceSet.has(invoiceId)) {
+            invoiceSet.add(invoiceId);
+            iLength++;
+          }
+          if (invoiceId.includes("B") && !billSet.has(invoiceId)) {
+            billSet.add(invoiceId);
+            bLength++;
+          }
         }
-      })
+      });
       console.log(iLength, bLength)
       temp.push({
         ...job,
