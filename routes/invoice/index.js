@@ -301,7 +301,7 @@ routes.get("/testResetSomeInvoices", async(req, res) => {
 
 routes.get("/getAllInoivcesByPartyId", async(req, res) => {
   try {
-    console.log("ID>>",req.headers)
+    console.log("ID>>",req.headers.id)
     // account = req.headers.type == "client" ? Client_Associations : Vendor_Associations;
     // acc = await account.findOne({
     //   where: {
@@ -1425,6 +1425,8 @@ routes.get("/jobBalancing", async (req, res) => {
       attributes:['id', 'weight', 'vol', 'fd', 'freightType', 'jobNo', 'operation', 'subType', 'jobDate', 'shipDate', 'arrivalDate', 'container', 'createdAt', 'fileNo', 'customerRef'],
       
     }]
+
+    invoiceObj.approved = '1'
 
     // overseas agent wise invoice/bill
     req.headers.overseasagent?includeObj.where = {overseasAgentId:req.headers.overseasagent}:null;

@@ -8,7 +8,7 @@ const { Employees } = require("../../functions/Associations/employeeAssociations
 const { Clients, Client_Associations } = require("../../functions/Associations/clientAssociation");
 const { Vendors, Vendor_Associations } = require("../../functions/Associations/vendorAssociations");
 const { Charge_Head, Invoice, Invoice_Transactions } = require("../../functions/Associations/incoiceAssociations");
-const { Accounts } = require('../../models/');
+const { Accounts, sequelize } = require('../../models/');
 const { Op, literal } = Sequelize;
 
 //Voucher Types
@@ -645,6 +645,7 @@ routes.post("/deletePaymentReceipt", async(req, res) => {
 });
 
 routes.post("/makeTransaction", async(req, res) => {
+  const t = await sequelize.transaction()
   try {
     console.log("Body: ", req.body)
     let invoices = req.body.invoices;
@@ -676,7 +677,7 @@ routes.post("/makeTransaction", async(req, res) => {
                 recieved: literal(`CAST(recieved AS numeric) + ${x.receiving}`), // Cast `recieved` to numeric, then add
                 status: "1",
               },
-              { where: { id: x.id } }
+              { where: { id: x.id }, transaction: t }
             );
             
           }else{
@@ -685,7 +686,7 @@ routes.post("/makeTransaction", async(req, res) => {
                 paid: literal(`CAST(recieved AS numeric) + ${x.receiving}`), // Cast `recieved` to numeric, then add
                 status: "1",
               },
-              { where: { id: x.id } }
+              { where: { id: x.id }, transaction: t }
             );
 
           }
@@ -697,7 +698,7 @@ routes.post("/makeTransaction", async(req, res) => {
                 recieved: x.receiving, // Cast `recieved` to numeric, then add
                 status: "1",
               },
-              { where: { id: x.id } }
+              { where: { id: x.id }, transaction: t }
             );
             
           }else{
@@ -707,7 +708,7 @@ routes.post("/makeTransaction", async(req, res) => {
                 paid: x.receiving, // Cast `recieved` to numeric, then add
                 status: "1",
               },
-              { where: { id: x.id } }
+              { where: { id: x.id }, transaction: t }
             );
           }
         }
@@ -769,18 +770,22 @@ routes.post("/makeTransaction", async(req, res) => {
       }
       // console.log(v.voucher_No)
       vouchers = await Vouchers.create(
-        v
+        v,
+        {
+          transaction: t
+        }
       )
       vID = vouchers.id
     }else{
       const vouchers = await Vouchers.update(
         { invoices: invoicesList }, // Data to update
-        { where: { id: vID } }      // Query options
+        { where: { id: vID }, transaction: t }      // Query options
       );
       await Voucher_Heads.destroy({
         where:{
           VoucherId: vID
-        }
+        },
+        transaction: t
       })
     }
     let account
@@ -815,6 +820,8 @@ routes.post("/makeTransaction", async(req, res) => {
               ChildAccountId: req.body.partyId,
               narration: req.body.narration==""?narration:req.body.narration,
               createdAt: req.body.tranDate
+            }, {
+              transaction: t
             }
           )
         }else{
@@ -829,6 +836,9 @@ routes.post("/makeTransaction", async(req, res) => {
                 ChildAccountId: req.body.partyId,
                 narration: req.body.narration==""?narration:req.body.narration,
                 createdAt: req.body.tranDate
+              },
+              {
+                transaction: t
               }
             )
           }else{
@@ -842,6 +852,9 @@ routes.post("/makeTransaction", async(req, res) => {
                 ChildAccountId: x.partyId,
                 narration: req.body.narration==""?narration:req.body.narration,
                 createdAt: req.body.tranDate
+              },
+              {
+                transaction: t
               }
             )
           }
@@ -858,6 +871,9 @@ routes.post("/makeTransaction", async(req, res) => {
               InvoiceId: x.id,
               VoucherId: vID
               
+            },
+            {
+              transaction: t
             }
           )
         }
@@ -865,7 +881,8 @@ routes.post("/makeTransaction", async(req, res) => {
         let a = await Invoice_Transactions.destroy({
           where: {
             InvoiceId: x.id
-          }
+          },
+          transaction: t
         })
         if(x.receiving!=0){
           let b = await Invoice_Transactions.create(
@@ -875,14 +892,19 @@ routes.post("/makeTransaction", async(req, res) => {
               InvoiceId: x.id,
               VoucherId: vID
               
+            },
+            {
+              transaction: t
             }
           )
         }
       }
     }
+    await t.commit();
     res.json({status:'success', result: vouchers});
   }
   catch (error) {
+    await t.rollback();
     console.log(error)
     res.json({status:'error', result:error});
   }
@@ -937,7 +959,7 @@ routes.post("/updateVoucher", async(req, res) => {
     // } 
     const result = await Vouchers.upsert(req.body)
     for(let x of voucher_Heads){
-      x.VoucherId = result.id
+      x.VoucherId = req.body.id
       await Voucher_Heads.upsert(x)
     }
     res.json({status:'success', result: result});
