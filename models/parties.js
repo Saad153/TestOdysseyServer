@@ -26,6 +26,7 @@ module.exports = (sequelize, DataTypes) => {
       branchCode: { type:DataTypes.STRING },
       accountNo: { type:DataTypes.STRING },
       iban: { type:DataTypes.STRING },
+      partyType: { type:DataTypes.STRING },
       swiftCode: { type:DataTypes.STRING },
       routingNo: { type:DataTypes.STRING },
       ifscCode: { type:DataTypes.STRING },
@@ -35,6 +36,14 @@ module.exports = (sequelize, DataTypes) => {
       active:{
         type:DataTypes.BOOLEAN,
         // defaultValue:0.0
+      },
+      companyId: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        references: {
+          model: "Companies", // pluralized table name
+          key: "id",
+        },
       },
       COAId: {
         type: DataTypes.INTEGER,

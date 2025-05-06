@@ -10,7 +10,7 @@ module.exports = (sequelize, DataTypes) => {
       code: {
         type: DataTypes.STRING,
         allowNull: false,
-        unique: true,
+        // unique: true,
         validate: {
           notEmpty: true,
         },
@@ -24,6 +24,14 @@ module.exports = (sequelize, DataTypes) => {
       },
       type: {
         type: DataTypes.STRING, // e.g. 'Asset', 'Liability', 'Income', 'Expense'
+      },
+      companyId: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        references: {
+          model: "Companies", // pluralized table name
+          key: "id",
+        },
       },
       parentId: {
         type: DataTypes.INTEGER, // for hierarchical COA
