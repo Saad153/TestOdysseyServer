@@ -53,11 +53,65 @@ module.exports = (sequelize, DataTypes) => {
           key: "id",
         },
       },
+      AccRepId: {
+        type: DataTypes.UUID,
+        allowNull: true,
+        references: {
+          model: "Employees", // Must match the table/model name
+          key: "id",
+        },
+      },
+      SalesRepId: {
+        type: DataTypes.UUID,
+        allowNull: true,
+        references: {
+          model: "Employees", // Must match the table/model name
+          key: "id",
+        },
+      },
+      DocRepId: {
+        type: DataTypes.UUID,
+        allowNull: true,
+        references: {
+          model: "Employees", // Must match the table/model name
+          key: "id",
+        },
+      },
     })
 
     Parties.associate = (models) => {
-        Parties.belongsTo(models.COA, { foreignKey: "COAId", as: "coa" });
-      };
+      // COA association
+      Parties.belongsTo(models.COA, {
+        foreignKey: "COAId",
+        as: "coa",
+      });
+    
+      // Company association
+      Parties.belongsTo(models.Company, {
+        foreignKey: "companyId",
+        as: "company",
+      });
+    
+      // Employee associations
+      Parties.belongsTo(models.Employees, {
+        foreignKey: "AccRepId",
+        as: "accountRep",
+      });
+    
+      Parties.belongsTo(models.Employees, {
+        foreignKey: "SalesRepId",
+        as: "salesRep",
+      });
+    
+      Parties.belongsTo(models.Employees, {
+        foreignKey: "DocRepId",
+        as: "docRep",
+      });
+    
+      // Optional: reverse associations (if needed)
+      // models.Company.hasMany(Parties, { foreignKey: "companyId", as: "parties" });
+      // models.COA.hasMany(Parties, { foreignKey: "COAId", as: "linkedParties" });
+    };
     
 
     return Parties;

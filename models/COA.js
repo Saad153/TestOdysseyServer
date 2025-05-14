@@ -49,12 +49,25 @@ module.exports = (sequelize, DataTypes) => {
         as: 'children',
         foreignKey: 'parentId',
       });
-  
+    
       COA.belongsTo(models.COA, {
         as: 'parent',
         foreignKey: 'parentId',
       });
+    
+      // Association with Company
+      COA.belongsTo(models.Company, {
+        foreignKey: 'companyId',
+        as: 'company',
+      });
+    
+      // Optional: If you want to allow querying all COAs for a Company from the Company side
+      models.Company.hasMany(COA, {
+        foreignKey: 'companyId',
+        as: 'coas',
+      });
     };
+    
   
     return COA;
   };

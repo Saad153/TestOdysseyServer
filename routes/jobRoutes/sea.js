@@ -8,10 +8,11 @@ const { Employees } = require("../../functions/Associations/employeeAssociations
 const { Vendors } = require("../../functions/Associations/vendorAssociations");
 const { Clients } = require("../../functions/Associations/clientAssociation");
 const { Voyage } = require("../../functions/Associations/vesselAssociations");
-const { Commodity, Vessel, Charges }=require("../../models");
+const { Commodity, Vessel, Charges, Parties }=require("../../models");
 const routes = require('express').Router();
 const Sequelize = require('sequelize');
 const moment = require("moment");
+// const parties = require("../../models");
 const Op = Sequelize.Op;
 
 const getJob = (id) => {
@@ -26,6 +27,8 @@ const getJob = (id) => {
 }
 
 routes.get("/getValues", async(req, res) => {
+  console.log(req.headers.companyid)
+  const companyId = req.headers.companyid;
   console.log("============Request Made=====================")
   let makeResult = (result, resultTwo) => {
     let finalResult = {shipper:[], consignee:[], notify:[], client:[], sLine:[]};
@@ -86,15 +89,17 @@ routes.get("/getValues", async(req, res) => {
   };
 
   try {
-    const resultOne = await Clients.findAll({ 
+    const resultOne = await Parties.findAll({ 
       where:{
-        active:true
+        active:true,
+        companyId: companyId
       },
-      attributes:['id','name', 'types', 'code', 'nongl'],
+      attributes:['id','name', 'types', 'code'],
       order: [['createdAt', 'DESC']]
     })
-    const result = await Clients.findAll({ 
+    const result = await Parties.findAll({ 
       where: {
+        companyId: companyId,
         types: {
           [Op.or]:[
             { [Op.substring]: 'Shipper' },
@@ -107,8 +112,9 @@ routes.get("/getValues", async(req, res) => {
       attributes:['id','name', 'types', 'code'],
       order: [['createdAt', 'DESC']]
     })
-    const resultThree = await Vendors.findAll({ 
+    const resultThree = await Parties.findAll({ 
       where: {
+        companyId: companyId,
         types: {
           [Op.or]:[
             { [Op.substring]: 'Transporter' },
@@ -352,7 +358,7 @@ routes.get("/get", async(req, res) => {
           attributes:['hbl', 'mbl']
         },
         {
-          model:Clients,
+          model:Parties,
           attributes:['name']
         }
       ],
@@ -362,6 +368,7 @@ routes.get("/get", async(req, res) => {
     res.json({status:'success', result:result});
   }
   catch (error) {
+    console.error(error)
     res.json({status:'error', result:error});
   }
 });

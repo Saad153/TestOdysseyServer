@@ -21,8 +21,15 @@ module.exports = (sequelize, DataTypes) => {
                 notEmpty: true
             }
         },
+        type: {
+            type: DataTypes.ENUM("pol", "pod", "fd"),
+            allowNull: false,
+            validate: {
+                notEmpty: true
+            }
+        },
         operation: {
-            type: DataTypes.STRING,
+            type: DataTypes.ENUM("SE", "SI", "AE", "AI"),
             allowNull: false,
             validate: {
                 notEmpty: true
