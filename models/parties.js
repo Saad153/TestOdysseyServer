@@ -33,6 +33,7 @@ module.exports = (sequelize, DataTypes) => {
       micrCode: { type:DataTypes.STRING },
       currency: { type:DataTypes.STRING },
       createdBy:{ type:DataTypes.STRING },
+      climaxId:{ type:DataTypes.INTEGER },
       active:{
         type:DataTypes.BOOLEAN,
         // defaultValue:0.0

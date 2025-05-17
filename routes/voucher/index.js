@@ -9,6 +9,7 @@ const { Clients, Client_Associations } = require("../../functions/Associations/c
 const { Vendors, Vendor_Associations } = require("../../functions/Associations/vendorAssociations");
 const { Charge_Head, Invoice, Invoice_Transactions } = require("../../functions/Associations/incoiceAssociations");
 const { Accounts, sequelize } = require('../../models/');
+const db = require("../../models/");
 const { Op, literal } = Sequelize;
 
 //Voucher Types
@@ -1032,10 +1033,10 @@ routes.post("/importVouchers", async (req, res) => {
 
     // console.log(req.body)
 
-    const accounts = await Child_Account.findAll({ include: Parent_Account });
+    const accounts = await db.COA.findAll();
     const accountMap = new Map();
     accounts.forEach((a) => {
-      const companyId = a.Parent_Account?.CompanyId;
+      const companyId = a.companyId;
       if (companyId) {
         accountMap.set(`${a.title}-${companyId}`, { id: a.id, subCategory: a.subCategory });
       }
@@ -1044,7 +1045,7 @@ routes.post("/importVouchers", async (req, res) => {
     for(let invoice of req.body){
       // console.log(invoice)
       accounts.forEach((account) => {
-        if (invoice.voucher.Voucher_Heads[0].GL_COA.AccountName == account.title && account.Parent_Account.CompanyId == (invoice.InvoiceNumber.includes("SNS") ? 1 : 3)) {
+        if (invoice.voucher.Voucher_Heads[0].GL_COA.AccountName == account.title && account.companyId == (invoice.InvoiceNumber.includes("SNS") ? 1 : 3)) {
           invoice.party_Id = account.id;
           invoice.party_Name = account.title;
         }
@@ -1087,7 +1088,6 @@ routes.post("/importVouchers", async (req, res) => {
         approved: '1',
         companyId: invoice.InvoiceNumber.includes("SNS") ? 1 : 3,
         partyType: invoice.voucher.GL_COA.GL_COASubCategory?invoice.voucher.GL_COA.GL_COASubCategory.SubCategory:"client",
-        SEJobId: 14
       };
       // processedInvoices.push(inv)
       const result = await Invoice.create(inv);
@@ -1121,7 +1121,7 @@ routes.post("/importVouchers", async (req, res) => {
           let CAID = 0;
           let type = vh.CreditLC !== 0 ? "credit" : "debit";
           accounts.forEach((account) => {
-            if (vh.GL_COA.AccountName == account.title && account.Parent_Account.CompanyId == (invoice.InvoiceNumber.includes("SNS") ? 1 : 3)) {
+            if (vh.GL_COA.AccountName == account.title && account.companyId == (invoice.InvoiceNumber.includes("SNS") ? 1 : 3)) {
               CAID = account.id;
             }
           })
@@ -1188,13 +1188,13 @@ routes.post("/importVouchers", async (req, res) => {
             let rec = parseFloat(result.dataValues.recieved) || 0;
             let pa = parseFloat(result.dataValues.paid) || 0;
             const adjAmount = parseFloat(adj.Amount) || 0;
-            console.log("Ajdustment Amount: ", adjAmount)
+            // console.log("Ajdustment Amount: ", adjAmount)
             if (result.dataValues.payType == "Payble") {
               pa += adjAmount;
             } else {
               rec += adjAmount;
             }
-            console.log("Updated values → rec:", rec, "pa:", pa);
+            // console.log("Updated values → rec:", rec, "pa:", pa);
 
             await result.update({
               paid: pa,
@@ -1241,10 +1241,10 @@ routes.post("/importVouchers", async (req, res) => {
 
 routes.post("/importV", async (req, res) => {
   try{
-    const accounts = await Child_Account.findAll({ include: Parent_Account });
+    const accounts = await db.COA.findAll();
     const accountMap = new Map();
     accounts.forEach((a) => {
-      const companyId = a.Parent_Account?.CompanyId;
+      const companyId = a.companyId;
       if (companyId) {
         accountMap.set(`${a.title}-${companyId}`, { id: a.id, subCategory: a.subCategory });
       }
@@ -1257,14 +1257,14 @@ routes.post("/importV", async (req, res) => {
       const headCOA = voucher.Voucher_Heads[0].GL_COA;
       
       accounts.forEach((account) => {
-        if (headCOA?.AccountName === account.title && account.Parent_Account?.CompanyId === companyId) {
+        if (headCOA?.AccountName.trim() === account.title.trim() && account.companyId === companyId) {
           party_Id = account.id;
           party_Name = account.title;
         }
       });
     
       try {
-        // console.log(voucher.VoucherNo);
+        console.log(voucher.VoucherNo);
         let v = {
           voucher_No: voucher.VoucherNo.split("-")[2].split("/")[0].replace(/^0+/, ""),
           voucher_Id: voucher.VoucherNo,
@@ -1287,8 +1287,15 @@ routes.post("/importV", async (req, res) => {
           const type = vh.CreditLC !== 0 ? "credit" : "debit";
     
           const accountKey = `${vh.GL_COA?.AccountName}-${companyId}`;
-          if (accountMap.has(accountKey)) {
+          if (accountMap.has(accountKey.trim()) ) {
             CAID = accountMap.get(accountKey).id;
+          }else if(accountKey.includes("RENOVATION")){
+            if(companyId == 1){
+              CAID = 1164
+            }else{
+              CAID = 3054
+            }
+            CAID
           } else {
             console.warn(`⚠️ No matching account for: ${vh.GL_COA?.AccountName}`);
           }

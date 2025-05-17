@@ -12,9 +12,30 @@ module.exports = (sequelize, DataTypes) => {
         pcs: { type:DataTypes.STRING },
         vol: { type:DataTypes.STRING },
         volWeight: { type:DataTypes.STRING },
-        pol: { type:DataTypes.STRING },
-        pod: { type:DataTypes.STRING },
-        fd: { type:DataTypes.STRING },
+        pol: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            references: {
+            model: "Ports", // pluralized table name
+            key: "id",
+            },
+        },
+        pod: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            references: {
+            model: "Ports", // pluralized table name
+            key: "id",
+            },
+        },
+        fd: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            references: {
+            model: "Ports", // pluralized table name
+            key: "id",
+            },
+        },
         dg: { type:DataTypes.STRING },
         subType: { type:DataTypes.STRING },
         billVol: { type:DataTypes.STRING },
@@ -72,5 +93,22 @@ module.exports = (sequelize, DataTypes) => {
         departureDate:{ type:DataTypes.STRING },
         departureTime:{ type:DataTypes.STRING },
     })
+
+    SE_Job.associate = (models) => {
+        SE_Job.belongsTo(models.Ports, {
+            foreignKey: "pod",
+            as: "podPort", // renamed to avoid collision
+        });
+
+        SE_Job.belongsTo(models.Ports, {
+            foreignKey: "pol",
+            as: "polPort",
+        });
+
+        SE_Job.belongsTo(models.Ports, {
+            foreignKey: "fd",
+            as: "fdPort",
+        });
+    };
     return SE_Job;
 }
