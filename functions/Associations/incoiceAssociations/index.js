@@ -38,7 +38,7 @@ Invoice_Transactions.belongsTo(Vouchers);
 SE_Job.hasMany(Invoice, {
     foriegnKey:{
         type: DataTypes.UUID,
-        allowNull:false
+        allowNull:true
     }
 });
 Invoice.belongsTo(SE_Job);
@@ -46,7 +46,7 @@ Invoice.belongsTo(SE_Job);
 SE_Job.hasMany(Charge_Head, {
     foriegnKey:{
         type: DataTypes.UUID,
-        allowNull:false
+        allowNull:true
     }
 });
 Charge_Head.belongsTo(SE_Job);
