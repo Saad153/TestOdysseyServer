@@ -591,7 +591,7 @@ routes.post("/invApproveDisapp", async(req, res) => {
 // Adds a note to invoice and also the currency
 routes.post("/addInvoiceNote", async(req, res) => {
   try {
-    await Invoice.update({ note:req.body.note, currency:req.body.currency}, { where:{id:req.body.id} });
+    await Invoice.update({ note:req.body.note, currency:req.body.currency, total: req.body.total}, { where:{id:req.body.id} });
     await res.json({status: 'success', result: 'result'});
   }
   catch (error) {
@@ -765,6 +765,7 @@ routes.post("/makeInvoiceNew", async(req, res) => {
     const lastAB = await Invoice.findOne({where:{type:'Agent Bill'},   order:[['invoice_Id', 'DESC']], attributes:["id","invoice_Id"], include:[{model:Charge_Head, attributes:['id']}]});
 
     for(let x of result){
+      console.log(x)
       if(x.invoiceType=="Job Bill"){
         if(Object.keys(createdInvoice).length==0){
           createdInvoice = await createInvoices(lastJB, "JB", "Job Bill", req.body.companyId, req.body.type, x)

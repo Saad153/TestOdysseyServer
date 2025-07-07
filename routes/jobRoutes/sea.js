@@ -321,9 +321,9 @@ routes.post("/edit", async (req, res) => {
       },
     });
     console.log("Data Approved: ", data.approved)
-    if (check.dataValues.approved == 'true') {
-      return res.json({ status: "approved", result: await getJob(data.id) });
-    }
+    // if (check.dataValues.approved == 'true') {
+    //   return res.json({ status: "approved", result: await getJob(data.id) });
+    // }
 
     await SE_Job.update(data, { where: { id: data.id } }).catch((x) => console.log(1));
     await SE_Equipments.destroy({ where: { SEJobId: data.id } }).catch((x) => console.log(2));
@@ -986,7 +986,7 @@ routes.post("/getCounts", async (req, res) => {
   try {
     let data = req.body.data;
     let temp = []
-    console.log("First Job ID:", data[0]); // or console.log("Data:", data);
+    // console.log("First Job ID:", data[0]); // or console.log("Data:", data);
     for(let job of data){
       const charges = await Charge_Head.findAll({
         where: {
@@ -1012,7 +1012,7 @@ routes.post("/getCounts", async (req, res) => {
           }
         }
       });
-      console.log(iLength, bLength)
+      // console.log(iLength, bLength)
       temp.push({
         ...job,
         iLength: iLength,

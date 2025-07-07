@@ -435,6 +435,9 @@ routes.get("/getAllJobPayRecVouchers", async (req, res) => {
             { model:SE_Equipments, attributes:['qty', 'size'] },
             { model:Bl, required: false, attributes:['mbl', 'hbl'] },
           ]
+        },
+        {
+          model: Invoice_Transactions
         }
       ]
     })
@@ -647,7 +650,7 @@ routes.post("/deletePaymentReceipt", async(req, res) => {
 routes.post("/makeTransaction", async(req, res) => {
   const t = await sequelize.transaction()
   try {
-    console.log("Body: ", req.body)
+    // console.log("Body: ", req.body)
     let invoices = req.body.invoices;
     let invoicesList = ""
     let narration  = ""
@@ -669,7 +672,7 @@ routes.post("/makeTransaction", async(req, res) => {
     let i = 0
     for(let x of invoices){
       if(x.receiving!=0){
-        // console.log("State Edit>>>", !req.body.edit)
+        // console.log("Invoices>>>", x.invoice_No)
         if(!req.body.edit){
           if(x.payType=="Recievable"){
             const updateInvoice = await Invoice.update(
@@ -724,9 +727,9 @@ routes.post("/makeTransaction", async(req, res) => {
           narration = `${narration}, For ${x.party_Name}`
         }
       }
-      if(req.body.edit){
-        invoicesList += `${x.id},`
-      }
+      // if(req.body.edit && x.receiving!=0){
+      //   invoicesList += `${x.id},`
+      // }
       i++
     }
     let vID = req.body.voucherId
@@ -777,8 +780,11 @@ routes.post("/makeTransaction", async(req, res) => {
       )
       vID = vouchers.id
     }else{
+      console.log(narration)
       const vouchers = await Vouchers.update(
-        { invoices: invoicesList }, // Data to update
+        { invoices: invoicesList,
+          voucherNarration: narration
+         }, // Data to update
         { where: { id: vID }, transaction: t }      // Query options
       );
       await Voucher_Heads.destroy({
@@ -808,7 +814,7 @@ routes.post("/makeTransaction", async(req, res) => {
       }
       // console.log("Narration>>>>", req.body.narration)
       if(x.accountName!="Total"){
-        console.log(x.accountType, x)
+        // console.log(x.accountType, x)
         if(x.accountType=='partyAccount'){
           await Voucher_Heads.create(
             {
@@ -818,7 +824,7 @@ routes.post("/makeTransaction", async(req, res) => {
               accountType: x.accountType,
               VoucherId: vID,
               ChildAccountId: req.body.partyId,
-              narration: req.body.narration==""?narration:req.body.narration,
+              narration: narration,
               createdAt: req.body.tranDate
             }, {
               transaction: t
@@ -880,7 +886,8 @@ routes.post("/makeTransaction", async(req, res) => {
       }else{
         let a = await Invoice_Transactions.destroy({
           where: {
-            InvoiceId: x.id
+            InvoiceId: x.id,
+            VoucherId: vID
           },
           transaction: t
         })

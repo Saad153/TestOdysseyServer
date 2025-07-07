@@ -216,7 +216,7 @@ routes.post("/editClient", async(req, res) => {
               where: { title: { [Op.or]: [`${req.body.pAccountName}`] } }
             });
             const accountsList = await Child_Account.bulkCreate(await createChildAccounts(accounts, value.name));
-            // await clientAssociation.bulkCreate(createAccountList(accounts, accountsList, value.id)).catch((x)=>console.log(x))
+            await Client_Associations.bulkCreate(createAccountList(accounts, accountsList, value.id)).catch((x)=>console.log(x))
         } else {
             clientAssociation.forEach(async(x)=>{
                 ids.push(x.ChildAccountId);
